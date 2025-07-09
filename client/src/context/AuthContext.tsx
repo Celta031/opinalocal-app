@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     if (isFallbackMode()) {
-      console.warn("Running in fallback authentication mode");
+      console.log("Running in fallback authentication mode - ready for testing");
       setLoading(false);
       return;
     }

@@ -191,6 +191,11 @@ export const Login = () => {
           <p className="text-gray-600">
             Descubra e avalie os melhores restaurantes
           </p>
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Modo de Teste:</strong> Use qualquer email e senha para testar a aplicação!
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
