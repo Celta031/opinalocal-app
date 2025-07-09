@@ -10,7 +10,9 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- **January 2025**: Fixed TypeScript compilation errors in storage layer
+- **January 2025**: Migrated from in-memory storage to PostgreSQL database
+- **January 2025**: Added database seeding with sample data (restaurants, categories, reviews)
+- **January 2025**: Fixed Firebase authentication with proper error handling
 - **January 2025**: Added RestaurantRegistrationModal component with address autocomplete simulation
 - **January 2025**: Integrated Firebase Authentication with environment variables
 - **January 2025**: Application fully functional with complete restaurant review workflow
@@ -84,9 +86,10 @@ Preferred communication style: Simple, everyday language.
 - Client-side SDK for auth state management
 
 ### Database Infrastructure
-- **Neon Database**: Serverless PostgreSQL hosting
+- **PostgreSQL**: Persistent database with full ACID compliance
 - **Drizzle ORM**: Type-safe database queries and migrations
 - **Connection**: Environment-based DATABASE_URL configuration
+- **Seeding**: Automated sample data initialization with default categories and restaurants
 
 ### UI Components
 - **shadcn/ui**: Pre-built accessible components
@@ -112,6 +115,7 @@ Preferred communication style: Simple, everyday language.
 - Schema defined in `shared/schema.ts` for type safety
 - Migrations managed through Drizzle Kit
 - Development uses `db:push` for schema synchronization
-- Production requires proper migration strategy
+- Persistent storage replaces in-memory storage for production-ready data handling
+- Seeding script available in `server/seed.ts` for initial data setup
 
 The application follows a monorepo structure with shared types between frontend and backend, enabling full-stack type safety and efficient development workflows.

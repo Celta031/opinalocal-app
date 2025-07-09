@@ -1,4 +1,6 @@
 import { users, restaurants, categories, reviews, type User, type InsertUser, type Restaurant, type InsertRestaurant, type Category, type InsertCategory, type Review, type InsertReview } from "@shared/schema";
+import { db } from "./db";
+import { eq, like, ilike, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -337,4 +339,110 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.firebaseUid, firebaseUid));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+
+  async getRestaurant(id: number): Promise<Restaurant | undefined> {
+    const [restaurant] = await db.select().from(restaurants).where(eq(restaurants.id, id));
+    return restaurant || undefined;
+  }
+
+  async getRestaurants(validated?: boolean): Promise<Restaurant[]> {
+    if (validated !== undefined) {
+      return await db.select().from(restaurants).where(eq(restaurants.isValidated, validated));
+    }
+    return await db.select().from(restaurants);
+  }
+
+  async searchRestaurants(query: string): Promise<Restaurant[]> {
+    return await db.select().from(restaurants).where(ilike(restaurants.name, `%${query}%`));
+  }
+
+  async createRestaurant(insertRestaurant: InsertRestaurant): Promise<Restaurant> {
+    const [restaurant] = await db
+      .insert(restaurants)
+      .values(insertRestaurant)
+      .returning();
+    return restaurant;
+  }
+
+  async validateRestaurant(id: number): Promise<Restaurant | undefined> {
+    const [restaurant] = await db
+      .update(restaurants)
+      .set({ isValidated: true })
+      .where(eq(restaurants.id, id))
+      .returning();
+    return restaurant || undefined;
+  }
+
+  async getCategories(status?: string): Promise<Category[]> {
+    if (status) {
+      return await db.select().from(categories).where(eq(categories.status, status));
+    }
+    return await db.select().from(categories);
+  }
+
+  async searchCategories(query: string): Promise<Category[]> {
+    return await db.select().from(categories).where(ilike(categories.name, `%${query}%`));
+  }
+
+  async createCategory(insertCategory: InsertCategory): Promise<Category> {
+    const [category] = await db
+      .insert(categories)
+      .values(insertCategory)
+      .returning();
+    return category;
+  }
+
+  async updateCategoryStatus(id: number, status: string): Promise<Category | undefined> {
+    const [category] = await db
+      .update(categories)
+      .set({ status })
+      .where(eq(categories.id, id))
+      .returning();
+    return category || undefined;
+  }
+
+  async getReview(id: number): Promise<Review | undefined> {
+    const [review] = await db.select().from(reviews).where(eq(reviews.id, id));
+    return review || undefined;
+  }
+
+  async getReviewsByRestaurant(restaurantId: number): Promise<Review[]> {
+    return await db.select().from(reviews).where(eq(reviews.restaurantId, restaurantId));
+  }
+
+  async getReviewsByUser(userId: number): Promise<Review[]> {
+    return await db.select().from(reviews).where(eq(reviews.userId, userId));
+  }
+
+  async getRecentReviews(limit: number = 10): Promise<Review[]> {
+    return await db.select().from(reviews).orderBy(desc(reviews.createdAt)).limit(limit);
+  }
+
+  async createReview(insertReview: InsertReview): Promise<Review> {
+    const [review] = await db
+      .insert(reviews)
+      .values(insertReview)
+      .returning();
+    return review;
+  }
+}
+
+export const storage = new DatabaseStorage();
