@@ -6,6 +6,7 @@ export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
   // Restaurants
@@ -220,6 +221,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).find(user => user.firebaseUid === firebaseUid);
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(user => user.email === email);
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const user: User = {
       id: this.userIdCounter++,
@@ -347,6 +352,11 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.firebaseUid, firebaseUid));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
   }
 

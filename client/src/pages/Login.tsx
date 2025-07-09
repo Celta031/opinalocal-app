@@ -17,17 +17,32 @@ export const Login = () => {
   const { toast } = useToast();
 
   const createOrFindUserInBackend = async (user: any) => {
-    // First, try to find existing user by Firebase UID
-    try {
-      const existingUserResponse = await apiRequest("GET", `/api/users/firebase/${user.uid}`);
-      if (existingUserResponse.ok) {
-        const userData = await existingUserResponse.json();
-        console.log("User found in backend:", userData);
-        window.location.href = "/";
-        return;
+    // For fallback mode, first try to find user by email since UIDs change
+    if (user.uid && user.uid.startsWith('fallback-')) {
+      try {
+        const existingUserResponse = await apiRequest("GET", `/api/users/email/${user.email}`);
+        if (existingUserResponse.ok) {
+          const userData = await existingUserResponse.json();
+          console.log("User found by email in backend:", userData);
+          window.location.href = "/";
+          return;
+        }
+      } catch (error) {
+        console.log("User not found by email, will create new user...");
       }
-    } catch (error) {
-      console.log("User not found, creating new user...");
+    } else {
+      // For real Firebase mode, try to find by Firebase UID
+      try {
+        const existingUserResponse = await apiRequest("GET", `/api/users/firebase/${user.uid}`);
+        if (existingUserResponse.ok) {
+          const userData = await existingUserResponse.json();
+          console.log("User found by Firebase UID in backend:", userData);
+          window.location.href = "/";
+          return;
+        }
+      } catch (error) {
+        console.log("User not found by Firebase UID, will create new user...");
+      }
     }
 
     // If user doesn't exist, create new user
