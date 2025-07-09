@@ -1,0 +1,112 @@
+Prompt para IA de Desenvolvimento de Software
+Projeto: Criar uma aplicação web completa para uma plataforma de avaliação de restaurantes chamada "OpinaLocal".
+
+Objetivo: Desenvolver o front-end em React e um esboço da API back-end em Node.js/Express para a Fase 1 (MVP) do projeto. A aplicação deve ser totalmente funcional, responsiva e seguir as especificações detalhadas abaixo.
+
+Estrutura e Funcionalidades Detalhadas:
+1. Autenticação e Gestão de Usuários:
+
+Tecnologia: Implementar autenticação via Firebase (Authentication).
+
+Fluxo:
+
+Página de Login/Cadastro.
+
+Opções de login: E-mail/Senha e Login com Google (Google Sign-In).
+
+Após o login, o usuário é redirecionado para a página inicial.
+
+A barra de navegação deve exibir o nome do usuário e um botão de "Sair".
+
+2. Página Inicial (Dashboard):
+
+Uma barra de pesquisa proeminente para "Encontrar um restaurante".
+
+Um botão de ação principal (CTA) para "Criar Nova Avaliação".
+
+Uma lista ou grade exibindo avaliações recentes de outros usuários.
+
+3. Fluxo de Criação/Edição de Avaliação:
+
+Passo 1: Pesquisa do Restaurante:
+
+Conforme o usuário digita o nome do restaurante, o sistema deve realizar uma busca em tempo real (live search) e exibir uma lista de sugestões correspondentes (use um array de objetos mockado no front-end por enquanto).
+
+Se o restaurante não for encontrado, mostrar um botão "Cadastrar novo restaurante".
+
+Ao clicar, um modal deve surgir para o cadastro.
+
+Passo 2: Cadastro de Novo Restaurante (com Autocomplete):
+
+Campo de Nome: Campo de texto para o nome do restaurante.
+
+Campo de Endereço com Autocomplete:
+
+Tecnologia: Integrar a API do Google Places (ou uma alternativa similar) para a funcionalidade de autocompletar endereços.
+
+Funcionalidade: Conforme o usuário digita o endereço, a API deve sugerir locais correspondentes em tempo real. Ao selecionar uma sugestão, os campos de endereço (rua, número, bairro, cidade, estado, CEP) devem ser preenchidos automaticamente no formulário.
+
+Passo 3: Formulário de Avaliação:
+
+Campo de Data: Preenchido com a data atual, mas com um seletor para permitir alteração.
+
+Upload de Fotos: Um componente que permite ao usuário selecionar e pré-visualizar múltiplas imagens.
+
+Campo de Texto: Uma área de texto (<textarea>) para a avaliação escrita.
+
+Categorias Padrão: Uma lista de categorias fixas (mockar: ["Comida", "Atendimento", "Ambiente", "Preço"]). Cada categoria deve ter um componente de avaliação por estrelas (1 a 5).
+
+Categorias da Comunidade:
+
+Um campo de pesquisa com funcionalidade de busca em tempo real para encontrar categorias já criadas por usuários (mockar uma lista: ["Custo-benefício", "Bom para famílias", "Música ao vivo"]).
+
+Um botão "Sugerir nova categoria". Ao clicar, um campo de texto aparece para o usuário digitar o nome da nova categoria.
+
+Botão "Publicar Avaliação": Envia os dados (simular envio para a API).
+
+4. Página de Perfil do Restaurante:
+
+Layout:
+
+Topo: Nome do restaurante, endereço completo e uma galeria com as fotos enviadas pelos usuários.
+
+Seção de Resumo: Exibir a média de notas (calcular a partir das avaliações mockadas) para cada categoria padrão.
+
+Seção de Avaliações: Listar todas as avaliações individualmente, mostrando o autor, data, texto, fotos e as notas que ele deu.
+
+5. Modelo de Dados (Sugestão para Firestore/Mock Data):
+
+Coleção users: { userId, name, email, photoURL }
+
+Coleção restaurants: { restaurantId, name, address: { street, city, state, postalCode, fullAddress }, location: { lat, lng }, isValidated: (true/false) }
+
+Coleção reviews: { reviewId, userId, restaurantId, text, photos: [url1, url2], date, ratings: { standard: { "Comida": 4, "Atendimento": 5 }, custom: { "Custo-benefício": 5 } } }
+
+Coleção categories: { categoryId, name, createdBy: 'admin' | userId, status: 'approved' | 'pending' }
+
+6. Painel de Administração (Página Simplificada):
+
+Criar uma rota /admin protegida.
+
+Listar novas categorias sugeridas por usuários com botões "Aprovar" e "Rejeitar".
+
+Listar novos restaurantes cadastrados com um botão "Validar".
+
+7. Requisitos de Experiência do Usuário (UX):
+
+Busca em Tempo Real (Live Search): Todos os campos de busca na aplicação (pesquisa de restaurantes, endereço, categorias da comunidade, etc.) devem ser dinâmicos. A lista de resultados deve ser atualizada em tempo real, à medida que o usuário digita, para fornecer feedback instantâneo e agilizar o processo de busca.
+
+Requisitos Técnicos:
+
+Front-end: React com Hooks.
+
+Estilização: Tailwind CSS para um design moderno e responsivo.
+
+Estado Global: React Context ou Zustand.
+
+APIs Externas: O projeto deve prever a integração com a API do Google Places para a funcionalidade de autocompletar endereços, incluindo um local para configurar a chave da API.
+
+Back-end (Esboço): Crie uma estrutura de pastas para uma API Node.js com Express. Defina as rotas principais (/auth, /restaurants, /reviews) e controladores de exemplo que retornam dados mockados em JSON.
+
+Ação Solicitada:
+Por favor, gere o código completo e auto-contido para a aplicação web em React, seguindo todas as especificações acima. Inclua comentários claros no código para explicar a lógica dos componentes e funções.
