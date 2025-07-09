@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { auth, handleRedirectResult } from "@/lib/firebase";
+import { isFallbackMode } from "@/lib/auth-fallback";
 import { User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -31,16 +32,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isFallbackMode()) {
+      console.warn("Running in fallback authentication mode");
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setFirebaseUser(firebaseUser);
       
       if (firebaseUser) {
         try {
+          console.log("Firebase user authenticated:", firebaseUser.uid, firebaseUser.email);
+          
           // Try to get existing user
           const response = await fetch(`/api/users/firebase/${firebaseUser.uid}`);
           
           if (response.ok) {
             const userData = await response.json();
+            console.log("Existing user found:", userData);
             setUser(userData);
           } else if (response.status === 404) {
             // Create new user
@@ -51,9 +61,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
               photoURL: firebaseUser.photoURL,
             };
             
+            console.log("Creating new user:", newUser);
             const createResponse = await apiRequest("POST", "/api/users", newUser);
-            const userData = await createResponse.json();
-            setUser(userData);
+            if (createResponse.ok) {
+              const userData = await createResponse.json();
+              console.log("New user created:", userData);
+              setUser(userData);
+            } else {
+              console.error("Failed to create user:", await createResponse.text());
+            }
+          } else {
+            console.error("Unexpected response status:", response.status, await response.text());
           }
         } catch (error) {
           console.error("Error creating/fetching user:", error);

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { signInWithGoogle, signInWithEmail, signUpWithEmail } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 
 export const Login = () => {
@@ -18,11 +19,36 @@ export const Login = () => {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-      await signInWithGoogle();
+      console.log("Attempting Google sign in...");
+      const result = await signInWithGoogle();
+      
+      // Handle fallback mode
+      if (result && result.user && result.user.uid && result.user.uid.startsWith('fallback-')) {
+        console.log("Fallback mode: Creating user in backend...");
+        
+        try {
+          const newUser = {
+            firebaseUid: result.user.uid,
+            email: result.user.email!,
+            name: result.user.displayName || result.user.email!,
+            photoURL: result.user.photoURL,
+          };
+          
+          const createResponse = await apiRequest("POST", "/api/users", newUser);
+          if (createResponse.ok) {
+            const userData = await createResponse.json();
+            console.log("User created in backend:", userData);
+            window.location.href = "/";
+          }
+        } catch (backendError) {
+          console.error("Error creating user in backend:", backendError);
+        }
+      }
     } catch (error) {
+      console.error("Google sign in error:", error);
       toast({
-        title: "Error",
-        description: "Failed to sign in with Google",
+        title: "Erro",
+        description: "Falha ao entrar com Google. Verifique sua conexão e tente novamente.",
         variant: "destructive",
       });
     } finally {
@@ -36,11 +62,51 @@ export const Login = () => {
 
     try {
       setLoading(true);
-      await signInWithEmail(email, password);
-    } catch (error) {
+      console.log("Attempting email sign in...");
+      const result = await signInWithEmail(email, password);
+      
+      // Handle fallback mode
+      if (result && result.user) {
+        console.log("Sign in successful:", result.user);
+        
+        // For fallback mode, we need to manually trigger user creation
+        if (result.user.uid && result.user.uid.startsWith('fallback-')) {
+          console.log("Fallback mode: Creating user in backend...");
+          
+          try {
+            const newUser = {
+              firebaseUid: result.user.uid,
+              email: result.user.email!,
+              name: result.user.displayName || result.user.email!,
+              photoURL: result.user.photoURL,
+            };
+            
+            const createResponse = await apiRequest("POST", "/api/users", newUser);
+            if (createResponse.ok) {
+              const userData = await createResponse.json();
+              console.log("User created in backend:", userData);
+              window.location.href = "/";
+            }
+          } catch (backendError) {
+            console.error("Error creating user in backend:", backendError);
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error("Email sign in error:", error);
+      let errorMessage = "Falha ao entrar";
+      
+      if (error.code === 'auth/user-not-found') {
+        errorMessage = "Usuário não encontrado";
+      } else if (error.code === 'auth/wrong-password') {
+        errorMessage = "Senha incorreta";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Email inválido";
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to sign in",
+        title: "Erro",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -54,8 +120,8 @@ export const Login = () => {
 
     if (password !== confirmPassword) {
       toast({
-        title: "Error",
-        description: "Passwords do not match",
+        title: "Erro",
+        description: "Senhas não coincidem",
         variant: "destructive",
       });
       return;
@@ -63,11 +129,51 @@ export const Login = () => {
 
     try {
       setLoading(true);
-      await signUpWithEmail(email, password);
-    } catch (error) {
+      console.log("Attempting email sign up...");
+      const result = await signUpWithEmail(email, password);
+      
+      // Handle fallback mode  
+      if (result && result.user) {
+        console.log("Sign up successful:", result.user);
+        
+        // For fallback mode, we need to manually trigger user creation
+        if (result.user.uid && result.user.uid.startsWith('fallback-')) {
+          console.log("Fallback mode: Creating user in backend...");
+          
+          try {
+            const newUser = {
+              firebaseUid: result.user.uid,
+              email: result.user.email!,
+              name: result.user.displayName || result.user.email!,
+              photoURL: result.user.photoURL,
+            };
+            
+            const createResponse = await apiRequest("POST", "/api/users", newUser);
+            if (createResponse.ok) {
+              const userData = await createResponse.json();
+              console.log("User created in backend:", userData);
+              window.location.href = "/";
+            }
+          } catch (backendError) {
+            console.error("Error creating user in backend:", backendError);
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error("Email sign up error:", error);
+      let errorMessage = "Falha ao criar conta";
+      
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = "Email já está em uso";
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = "Senha muito fraca";
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = "Email inválido";
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to create account",
+        title: "Erro",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
