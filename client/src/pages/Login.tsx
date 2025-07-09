@@ -16,7 +16,21 @@ export const Login = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const { toast } = useToast();
 
-  const createUserInBackend = async (user: any) => {
+  const createOrFindUserInBackend = async (user: any) => {
+    // First, try to find existing user by Firebase UID
+    try {
+      const existingUserResponse = await apiRequest("GET", `/api/users/firebase/${user.uid}`);
+      if (existingUserResponse.ok) {
+        const userData = await existingUserResponse.json();
+        console.log("User found in backend:", userData);
+        window.location.href = "/";
+        return;
+      }
+    } catch (error) {
+      console.log("User not found, creating new user...");
+    }
+
+    // If user doesn't exist, create new user
     const newUser = {
       firebaseUid: user.uid,
       email: user.email!,
@@ -32,6 +46,11 @@ export const Login = () => {
     } else {
       const errorData = await createResponse.json();
       console.error("Backend error:", errorData);
+      // Even if creation fails due to duplicate, try to proceed to dashboard
+      if (errorData.error && errorData.error.includes('duplicate')) {
+        console.log("User already exists, proceeding to dashboard");
+        window.location.href = "/";
+      }
     }
   };
 
@@ -46,9 +65,9 @@ export const Login = () => {
         console.log("Fallback mode: Creating user in backend...");
         
         try {
-          await createUserInBackend(result.user);
+          await createOrFindUserInBackend(result.user);
         } catch (backendError) {
-          console.error("Error creating user in backend:", backendError);
+          console.error("Error with user in backend:", backendError);
         }
       }
     } catch (error) {
@@ -81,9 +100,9 @@ export const Login = () => {
           console.log("Fallback mode: Creating user in backend...");
           
           try {
-            await createUserInBackend(result.user);
+            await createOrFindUserInBackend(result.user);
           } catch (backendError) {
-            console.error("Error creating user in backend:", backendError);
+            console.error("Error with user in backend:", backendError);
           }
         }
       }
@@ -136,9 +155,9 @@ export const Login = () => {
           console.log("Fallback mode: Creating user in backend...");
           
           try {
-            await createUserInBackend(result.user);
+            await createOrFindUserInBackend(result.user);
           } catch (backendError) {
-            console.error("Error creating user in backend:", backendError);
+            console.error("Error with user in backend:", backendError);
           }
         }
       }
