@@ -10,6 +10,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  setUser: (user: User | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -100,7 +101,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   return (
-    <AuthContext.Provider value={{ firebaseUser, user, loading, signOut }}>
+    <AuthContext.Provider value={{ firebaseUser, user, loading, signOut, setUser }}> {/* <-- ADICIONE setUser AQUI */}
       {children}
     </AuthContext.Provider>
   );

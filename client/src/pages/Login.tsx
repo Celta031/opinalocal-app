@@ -8,8 +8,12 @@ import { signInWithGoogle, signInWithEmail, signUpWithEmail } from "@/lib/fireba
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/context/AuthContext";
 
 export const Login = () => {
+  const [, setLocation] = useLocation();
+  const { setUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,18 +21,19 @@ export const Login = () => {
   const { toast } = useToast();
 
   const createOrFindUserInBackend = async (user: any) => {
-    // For fallback mode, first try to find user by email since UIDs change
+    // Para o modo de fallback, primeiro tente encontrar o usuário por e-mail, pois os UIDs mudam
     if (user.uid && user.uid.startsWith('fallback-')) {
       try {
         const existingUserResponse = await apiRequest("GET", `/api/users/email/${user.email}`);
         if (existingUserResponse.ok) {
           const userData = await existingUserResponse.json();
+          setUser(userData);
           console.log("User found by email in backend:", userData);
-          window.location.href = "/";
+          setLocation("/");
           return;
         }
       } catch (error) {
-        console.log("User not found by email, will create new user...");
+        console.log("Usuário não encontrado por e-mail, será criado um novo usuário...");
       }
     } else {
       // For real Firebase mode, try to find by Firebase UID
@@ -36,12 +41,13 @@ export const Login = () => {
         const existingUserResponse = await apiRequest("GET", `/api/users/firebase/${user.uid}`);
         if (existingUserResponse.ok) {
           const userData = await existingUserResponse.json();
-          console.log("User found by Firebase UID in backend:", userData);
-          window.location.href = "/";
+          setUser(userData);
+          console.log("Usuário encontrado pelo UID do Firebase no backend:", userData);
+          setLocation("/");
           return;
         }
       } catch (error) {
-        console.log("User not found by Firebase UID, will create new user...");
+        console.log("Usuário não encontrado pelo UID do Firebase, será criado um novo usuário...");
       }
     }
 
@@ -56,15 +62,15 @@ export const Login = () => {
     const createResponse = await apiRequest("POST", "/api/users", newUser);
     if (createResponse.ok) {
       const userData = await createResponse.json();
-      console.log("User created in backend:", userData);
-      window.location.href = "/";
+      console.log("Usuário criado no backend:", userData);
+      setLocation("/");
     } else {
       const errorData = await createResponse.json();
-      console.error("Backend error:", errorData);
+      console.error("Erro de backend:", errorData);
       // Even if creation fails due to duplicate, try to proceed to dashboard
       if (errorData.error && errorData.error.includes('duplicate')) {
-        console.log("User already exists, proceeding to dashboard");
-        window.location.href = "/";
+        console.log("O usuário já existe, prosseguindo para o painel");
+        setLocation("/");
       }
     }
   };
@@ -72,21 +78,21 @@ export const Login = () => {
   const handleGoogleSignIn = async () => {
     try {
       setLoading(true);
-      console.log("Attempting Google sign in...");
+      console.log("Tentando fazer login no Google...");
       const result = await signInWithGoogle();
       
       // Handle fallback mode
       if (result && result.user && result.user.uid && result.user.uid.startsWith('fallback-')) {
-        console.log("Fallback mode: Creating user in backend...");
+        console.log("Modo de fallback: Criando usuário no backend...");
         
         try {
           await createOrFindUserInBackend(result.user);
         } catch (backendError) {
-          console.error("Error with user in backend:", backendError);
+          console.error("Erro com usuário no backend:", backendError);
         }
       }
     } catch (error) {
-      console.error("Google sign in error:", error);
+      console.error("Erro de login do Google:", error);
       toast({
         title: "Erro",
         description: "Falha ao entrar com Google. Verifique sua conexão e tente novamente.",
@@ -103,12 +109,12 @@ export const Login = () => {
 
     try {
       setLoading(true);
-      console.log("Attempting email sign in...");
+      console.log("Tentando fazer login no e-mail...");
       const result = await signInWithEmail(email, password);
       
       // Handle fallback mode
       if (result && result.user) {
-        console.log("Sign in successful:", result.user);
+        console.log("Login efetuado com sucesso:", result.user);
         
         // For fallback mode, we need to manually trigger user creation
         if (result.user.uid && result.user.uid.startsWith('fallback-')) {
