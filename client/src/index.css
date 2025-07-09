@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(24, 95%, 53%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(60, 4.8%, 95.9%);
+  --secondary-foreground: hsl(24, 9.8%, 10%);
+  --accent: hsl(35, 85%, 52%);
+  --accent-foreground: hsl(0, 0%, 100%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(24, 95%, 53%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(35, 85%, 52%);
+  --accent-foreground: hsl(0, 0%, 100%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom styles for orange theme */
+.text-orange-600 {
+  color: hsl(24, 95%, 53%);
+}
+
+.bg-orange-600 {
+  background-color: hsl(24, 95%, 53%);
+}
+
+.hover\:bg-orange-700:hover {
+  background-color: hsl(24, 95%, 45%);
+}
+
+.border-orange-500 {
+  border-color: hsl(24, 95%, 53%);
+}
+
+.text-orange-500 {
+  color: hsl(24, 95%, 53%);
+}
+
+.fill-orange-500 {
+  fill: hsl(24, 95%, 53%);
+}
+
+.bg-orange-50 {
+  background-color: hsl(24, 95%, 97%);
+}
+
+.bg-orange-100 {
+  background-color: hsl(24, 95%, 92%);
+}
+
+.text-orange-100 {
+  color: hsl(24, 95%, 92%);
+}
+
+.hover\:text-orange-400:hover {
+  color: hsl(24, 95%, 65%);
+}
+
+.hover\:text-orange-600:hover {
+  color: hsl(24, 95%, 53%);
+}
+
+.hover\:text-orange-700:hover {
+  color: hsl(24, 95%, 45%);
+}
+
+.ring-orange-500 {
+  --tw-ring-color: hsl(24, 95%, 53%);
+}
+
+.ring-orange-300 {
+  --tw-ring-color: hsl(24, 95%, 75%);
+}
+
+.focus\:ring-orange-500:focus {
+  --tw-ring-color: hsl(24, 95%, 53%);
+}

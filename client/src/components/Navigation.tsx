@@ -1,0 +1,134 @@
+import { useState } from "react";
+import { Link, useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Plus, Menu, LogOut, User, Settings } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useApp } from "@/context/AppContext";
+
+export const Navigation = () => {
+  const [location] = useLocation();
+  const { user, signOut } = useAuth();
+  const { setShowCreateReviewModal } = useApp();
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  const handleNewReview = () => {
+    setShowCreateReviewModal(true);
+    setShowMobileMenu(false);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  return (
+    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          <div className="flex items-center">
+            <Link href="/">
+              <h1 className="text-2xl font-bold text-orange-600 cursor-pointer">
+                OpinaLocal
+              </h1>
+            </Link>
+          </div>
+
+          {/* Desktop Menu */}
+          <div className="hidden md:flex items-center space-x-4">
+            <span className="text-gray-700">
+              Olá, <span className="font-medium">{user?.name}</span>
+            </span>
+            <Button onClick={handleNewReview} className="bg-orange-600 hover:bg-orange-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Avaliação
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="p-0">
+                  <Avatar>
+                    <AvatarImage src={user?.photoURL || undefined} />
+                    <AvatarFallback>
+                      {user?.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem>
+                  <User className="w-4 h-4 mr-2" />
+                  Meu Perfil
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configurações
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          {/* Mobile Menu */}
+          <div className="md:hidden">
+            <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right">
+                <div className="flex flex-col space-y-4 mt-8">
+                  <div className="flex items-center space-x-3 pb-4 border-b">
+                    <Avatar>
+                      <AvatarImage src={user?.photoURL || undefined} />
+                      <AvatarFallback>
+                        {user?.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{user?.name}</span>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleNewReview} 
+                    className="w-full bg-orange-600 hover:bg-orange-700"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nova Avaliação
+                  </Button>
+                  
+                  <Button variant="ghost" className="w-full justify-start">
+                    <User className="w-4 h-4 mr-2" />
+                    Meu Perfil
+                  </Button>
+                  
+                  <Button variant="ghost" className="w-full justify-start">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Configurações
+                  </Button>
+                  
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-red-600 hover:text-red-700"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sair
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+};
