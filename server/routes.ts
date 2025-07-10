@@ -65,11 +65,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/restaurants/search", async (req, res) => {
     try {
+      // 1. Lê os parâmetros 'q' e 'validated' da URL
       const query = req.query.q as string;
-      if (!query) {
-        return res.status(400).json({ message: "Query parameter is required" });
-      }
-      const restaurants = await storage.searchRestaurants(query);
+      const validated = req.query.validated === 'true' ? true : undefined;
+
+      // 2. Chama a função de busca no storage com AMBOS os parâmetros
+      const restaurants = await storage.searchRestaurants(query, validated);
+      
       res.json(restaurants);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });

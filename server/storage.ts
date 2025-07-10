@@ -1,6 +1,6 @@
 import { users, restaurants, categories, reviews, type User, type InsertUser, type Restaurant, type InsertRestaurant, type Category, type InsertCategory, type Review, type InsertReview } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, ilike, desc, and } from "drizzle-orm";
+import { eq, ilike, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -12,7 +12,7 @@ export interface IStorage {
   // Restaurants
   getRestaurant(id: number): Promise<Restaurant | undefined>;
   getRestaurants(validated?: boolean): Promise<Restaurant[]>;
-  searchRestaurants(query: string): Promise<Restaurant[]>;
+  searchRestaurants(query: string, validated?: boolean): Promise<Restaurant[]>; 
   createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
   validateRestaurant(id: number): Promise<Restaurant | undefined>;
   
@@ -380,9 +380,33 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(restaurants);
   }
 
-  async searchRestaurants(query: string): Promise<Restaurant[]> {
-    return await db.select().from(restaurants).where(ilike(restaurants.name, `%${query}%`));
-  }
+  async searchRestaurants(query: string, validated?: boolean): Promise<Restaurant[]> {
+    
+    // Adicionamos um log para ver o que a função está recebendo
+    console.log(`[STORAGE] Recebido para busca -> query: "${query}", validated: ${validated}`);
+
+    // Cria a query base
+    const queryBuilder = db.select().from(restaurants);
+
+    // Cria as condições
+    const conditions = [];
+    if (query) {
+      conditions.push(ilike(restaurants.name, `%${query}%`));
+    }
+    if (validated !== undefined) {
+      conditions.push(eq(restaurants.isValidated, validated));
+    }
+
+    // Se houver condições, aplica. Senão, retorna array vazio.
+    if (conditions.length > 0) {
+      const results = await queryBuilder.where(and(...conditions));
+      console.log(`[STORAGE] Encontrados ${results.length} resultados.`);
+      return results;
+    } else {
+      console.log(`[STORAGE] Nenhuma condição de busca, retornando vazio.`);
+      return [];
+    }
+}
 
   async createRestaurant(insertRestaurant: InsertRestaurant): Promise<Restaurant> {
     const [restaurant] = await db
