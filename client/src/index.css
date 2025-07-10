@@ -118,3 +118,10 @@
 .focus\:ring-orange-500:focus {
   --tw-ring-color: hsl(24, 95%, 53%);
 }
+.pac-container {
+    z-index: 10000 !important;
+    background-color: white; /* Garante que tenha um fundo */
+    border-radius: 8px; /* Adiciona bordas arredondadas para combinar com o design */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Adiciona uma sombra */
+    border: 1px solid #e2e8f0; /* Adiciona uma borda sutil */
+}

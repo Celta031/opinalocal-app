@@ -1,3 +1,5 @@
+// Arquivo: client/src/lib/queryClient.ts
+
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
@@ -24,12 +26,27 @@ export async function apiRequest(
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
+
+// A LÓGICA CORRIGIDA ESTÁ AQUI
+const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    // Separa a URL base dos parâmetros
+    const [url, params] = queryKey;
+    let finalUrl = url as string;
+
+    // Se houver parâmetros em formato de objeto, transforma em query string
+    if (params && typeof params === 'object') {
+      const searchParams = new URLSearchParams(params as Record<string, string>);
+      finalUrl += `?${searchParams.toString()}`;
+    } else if (params) {
+      // Mantém o comportamento antigo para parâmetros simples
+      finalUrl += `/${params}`;
+    }
+
+    const res = await fetch(finalUrl, {
       credentials: "include",
     });
 
@@ -40,6 +57,7 @@ export const getQueryFn: <T>(options: {
     await throwIfResNotOk(res);
     return await res.json();
   };
+// FIM DA LÓGICA CORRIGIDA
 
 export const queryClient = new QueryClient({
   defaultOptions: {

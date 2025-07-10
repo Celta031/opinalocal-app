@@ -1,5 +1,11 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useJsApiLoader } from "@react-google-maps/api";
+import usePlacesAutocomplete, {
+  getGeocode,
+  getLatLng,
+} from "use-places-autocomplete";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,50 +17,71 @@ import { InsertRestaurant } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
-interface AddressData {
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  fullAddress: string;
-}
+const libraries: "places"[] = ["places"];
 
-interface RestaurantFormData {
+// Definindo a interface para o estado do formulário
+interface FormData {
   name: string;
-  address: AddressData;
+  address: {
+    street: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    fullAddress: string;
+  };
   location?: {
     lat: number;
     lng: number;
   };
 }
 
+// Valor inicial para o estado
+const initialFormData: FormData = {
+  name: "",
+  address: {
+    street: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    fullAddress: "",
+  },
+};
+
 export const RestaurantRegistrationModal = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { showRestaurantModal, setShowRestaurantModal } = useApp();
-  
-  const [formData, setFormData] = useState<RestaurantFormData>({
-    name: "",
-    address: {
-      street: "",
-      city: "",
-      state: "",
-      postalCode: "",
-      fullAddress: ""
-    }
+
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_Maps_API_KEY as string,
+    libraries,
   });
+
+  const [formData, setFormData] = useState<FormData>(initialFormData);
   
-  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [addressQuery, setAddressQuery] = useState("");
+  // Flag para saber se um endereço válido foi selecionado
+  const [isPlaceSelected, setIsPlaceSelected] = useState(false);
+
+  const {
+    ready,
+    value,
+    suggestions: { status, data },
+    setValue,
+    clearSuggestions,
+  } = usePlacesAutocomplete({
+    requestOptions: {
+      componentRestrictions: { country: "br" },
+    },
+    debounce: 300,
+  });
 
   const createRestaurantMutation = useMutation({
-    mutationFn: (restaurantData: InsertRestaurant) => 
+    mutationFn: (restaurantData: InsertRestaurant) =>
       apiRequest("POST", "/api/restaurants", restaurantData),
     onSuccess: () => {
       toast({
         title: "Sucesso",
-        description: "Restaurante cadastrado com sucesso! Aguarde a validação do administrador.",
+        description: "Restaurante cadastrado com sucesso! Aguarde a validação.",
       });
       setShowRestaurantModal(false);
       resetForm();
@@ -66,124 +93,70 @@ export const RestaurantRegistrationModal = () => {
         description: "Falha ao cadastrar restaurante",
         variant: "destructive",
       });
-    }
+    },
   });
 
   const resetForm = () => {
-    setFormData({
-      name: "",
-      address: {
-        street: "",
-        city: "",
-        state: "",
-        postalCode: "",
-        fullAddress: ""
-      }
-    });
-    setAddressQuery("");
-    setShowSuggestions(false);
+    setFormData(initialFormData);
+    setValue("", false);
+    clearSuggestions();
+    setIsPlaceSelected(false);
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue(e.target.value);
+    // Se o usuário digita, o endereço selecionado anteriormente não é mais válido
+    setIsPlaceSelected(false);
+    setFormData(prev => ({ ...prev, address: { ...initialFormData.address, fullAddress: e.target.value } }));
   };
 
-  // Simulate Google Places API - in production, this would connect to actual Google Places API
-  const handleAddressSearch = async (query: string) => {
-    setAddressQuery(query);
-    
-    if (query.length < 3) {
-      setShowSuggestions(false);
-      return;
+  const handleSelectSuggestion = async (description: string) => {
+    setValue(description, false);
+    clearSuggestions();
+    setIsPlaceSelected(false); // Inicia como falso até confirmarmos que os dados foram extraídos
+
+    try {
+      const results = await getGeocode({ address: description });
+      const { lat, lng } = await getLatLng(results[0]);
+      
+      const getAddressComponent = (type: string) =>
+        results[0].address_components.find(c => c.types.includes(type))?.long_name || "";
+      
+      const streetNumber = getAddressComponent("street_number");
+      const street = getAddressComponent("route");
+
+      setFormData(prev => ({
+        ...prev,
+        address: {
+          street: streetNumber ? `${street}, ${streetNumber}` : street,
+          city: getAddressComponent("administrative_area_level_2"),
+          state: getAddressComponent("administrative_area_level_1"),
+          postalCode: getAddressComponent("postal_code"),
+          fullAddress: description,
+        },
+        location: { lat, lng },
+      }));
+      setIsPlaceSelected(true); // Confirma que um endereço válido foi selecionado e processado
+    } catch (error) {
+      console.error("Error getting geocode: ", error);
     }
-
-    // Mock address suggestions - in production, replace with actual Google Places API
-    const mockSuggestions = [
-      {
-        place_id: "1",
-        description: "Rua da Consolação, 123 - Consolação, São Paulo - SP",
-        structured_formatting: {
-          main_text: "Rua da Consolação, 123",
-          secondary_text: "Consolação, São Paulo - SP"
-        }
-      },
-      {
-        place_id: "2", 
-        description: "Rua Augusta, 456 - Bela Vista, São Paulo - SP",
-        structured_formatting: {
-          main_text: "Rua Augusta, 456",
-          secondary_text: "Bela Vista, São Paulo - SP"
-        }
-      },
-      {
-        place_id: "3",
-        description: "Av. Paulista, 789 - Bela Vista, São Paulo - SP", 
-        structured_formatting: {
-          main_text: "Av. Paulista, 789",
-          secondary_text: "Bela Vista, São Paulo - SP"
-        }
-      }
-    ].filter(suggestion => 
-      suggestion.description.toLowerCase().includes(query.toLowerCase())
-    );
-
-    setAddressSuggestions(mockSuggestions);
-    setShowSuggestions(true);
-  };
-
-  const handleAddressSelect = (suggestion: any) => {
-    const parts = suggestion.description.split(" - ");
-    const street = parts[0] || "";
-    const neighborhood = parts[1] || "";
-    const cityState = parts[2] || "";
-    const [city, state] = cityState.split(" - ");
-
-    setFormData(prev => ({
-      ...prev,
-      address: {
-        street,
-        city: city || "São Paulo",
-        state: state || "SP",
-        postalCode: "01234-567", // Mock postal code
-        fullAddress: suggestion.description
-      },
-      location: {
-        lat: -23.5505 + (Math.random() - 0.5) * 0.1, // Mock coordinates near São Paulo
-        lng: -46.6333 + (Math.random() - 0.5) * 0.1
-      }
-    }));
-
-    setAddressQuery(suggestion.description);
-    setShowSuggestions(false);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
-
-    if (!formData.name.trim()) {
-      toast({
-        title: "Erro",
-        description: "Nome do restaurante é obrigatório",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!formData.address.fullAddress.trim()) {
-      toast({
-        title: "Erro", 
-        description: "Endereço é obrigatório",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const restaurantData: InsertRestaurant = {
-      name: formData.name.trim(),
-      address: formData.address,
-      location: formData.location,
-      createdBy: user.id
-    };
-
-    createRestaurantMutation.mutate(restaurantData);
+    if (!user || !isPlaceSelected) return;
+    
+    createRestaurantMutation.mutate({
+      ...formData,
+      createdBy: user.id,
+    });
   };
+
+  // Condição para desabilitar o botão de cadastro
+  const isSubmitDisabled = !formData.name || !isPlaceSelected || createRestaurantMutation.isPending;
+
+  if (loadError) return <div>Erro ao carregar o mapa. Verifique sua chave de API.</div>;
+  if (!isLoaded) return <div>Carregando...</div>;
 
   return (
     <Dialog open={showRestaurantModal} onOpenChange={setShowRestaurantModal}>
@@ -207,81 +180,50 @@ export const RestaurantRegistrationModal = () => {
           <div>
             <Label htmlFor="address">Endereço</Label>
             <div className="relative">
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  id="address"
-                  value={addressQuery}
-                  onChange={(e) => handleAddressSearch(e.target.value)}
-                  placeholder="Digite o endereço completo..."
-                  className="pl-10"
-                  required
-                />
-              </div>
-              
-              {showSuggestions && addressSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg mt-2 max-h-60 overflow-y-auto border border-gray-200 z-50">
-                  {addressSuggestions.map((suggestion) => (
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                id="address"
+                value={value}
+                onChange={handleInputChange}
+                disabled={!ready}
+                placeholder="Digite para pesquisar o endereço..."
+                className="pl-10"
+                required
+              />
+              {status === "OK" && (
+                <div className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto border border-gray-200 z-50">
+                  {data.map(({ place_id, description }) => (
                     <button
-                      key={suggestion.place_id}
+                      key={place_id}
                       type="button"
-                      onClick={() => handleAddressSelect(suggestion)}
+                      onClick={() => handleSelectSuggestion(description)}
                       className="w-full p-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
                     >
-                      <div className="flex items-center space-x-3">
-                        <MapPin className="w-4 h-4 text-gray-400" />
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            {suggestion.structured_formatting.main_text}
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {suggestion.structured_formatting.secondary_text}
-                          </div>
-                        </div>
-                      </div>
+                      {description}
                     </button>
                   ))}
                 </div>
               )}
             </div>
-            
-            {formData.address.fullAddress && (
-              <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                <p className="text-sm text-green-800">
-                  <strong>Endereço selecionado:</strong> {formData.address.fullAddress}
-                </p>
-              </div>
+            {!isPlaceSelected && value && (
+              <p className="text-xs text-yellow-600 mt-1">Por favor, selecione um endereço da lista.</p>
             )}
           </div>
-
+          
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-sm text-yellow-800">
-              <strong>Importante:</strong> Após o cadastro, o restaurante passará por validação 
-              do administrador antes de aparecer nas buscas.
+              <strong>Importante:</strong> Após o cadastro, o restaurante passará por validação do administrador.
             </p>
           </div>
 
           <div className="flex justify-end space-x-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowRestaurantModal(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => setShowRestaurantModal(false)}>
               Cancelar
             </Button>
-            <Button 
-              type="submit" 
-              disabled={createRestaurantMutation.isPending}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
+            <Button type="submit" disabled={isSubmitDisabled} className="bg-orange-600 hover:bg-orange-700">
               {createRestaurantMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Cadastrando...
-                </>
-              ) : (
-                "Cadastrar Restaurante"
-              )}
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Cadastrando...</>
+              ) : ( "Cadastrar Restaurante" )}
             </Button>
           </div>
         </form>
