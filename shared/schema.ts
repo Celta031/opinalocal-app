@@ -25,7 +25,7 @@ export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   createdBy: text("created_by").notNull(), // 'admin' or user id
-  status: text("status").default("approved").notNull(), // 'approved' | 'pending'
+  status: text("status").default("pending").notNull(), // 'approved' | 'pending'
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -71,13 +71,15 @@ export const insertCategorySchema = createInsertSchema(categories).omit({
   status: true,
 });
 
-export const insertReviewSchema = createInsertSchema(reviews).omit({
+export const insertReviewSchema = createInsertSchema(reviews, {
+    visitDate: z.coerce.date(), 
+}).omit({
   id: true,
   createdAt: true,
 }).extend({
   ratings: z.object({
-    standard: z.record(z.number().min(1).max(5)),
-    custom: z.record(z.number().min(1).max(5)).optional(),
+      standard: z.record(z.string(), z.number().min(1).max(5)),
+      custom: z.record(z.string(), z.number().min(1).max(5)).optional(),
   }),
   photos: z.array(z.string()).optional(),
 });

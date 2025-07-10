@@ -113,13 +113,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Categories
-  app.get("/api/categories", async (req, res) => {
+  app.post("/api/categories", async (req, res) => {
     try {
-      const status = req.query.status as string;
-      const categories = await storage.getCategories(status);
-      res.json(categories);
-    } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+      const categoryData = insertCategorySchema.parse(req.body);
+
+      // 1. Verifica se já existe uma categoria com esse nome
+      const existingCategory = await storage.getCategoryByName(categoryData.name);
+      if (existingCategory) {
+        // 2. Se existir, retorna um erro de conflito
+        return res.status(409).json({ message: "Essa categoria já existe." });
+      }
+
+      // 3. Se não existir, cria a nova categoria
+      const category = await storage.createCategory(categoryData);
+      res.status(201).json(category);
+    } catch (error: any) {
+      res.status(400).json({ message: "Invalid category data", error: error.message });
     }
   });
 
@@ -164,27 +173,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Reviews
   app.get("/api/reviews", async (req, res) => {
-    try {
-      const restaurantId = req.query.restaurantId as string;
-      const userId = req.query.userId as string;
-      const recent = req.query.recent === 'true';
+  try {
+    const restaurantId = req.query.restaurantId as string;
+    const userId = req.query.userId as string;
+    const recent = req.query.recent === 'true';
 
-      if (restaurantId) {
-        const reviews = await storage.getReviewsByRestaurant(parseInt(restaurantId));
-        res.json(reviews);
-      } else if (userId) {
-        const reviews = await storage.getReviewsByUser(parseInt(userId));
-        res.json(reviews);
-      } else if (recent) {
-        const reviews = await storage.getRecentReviews(10);
-        res.json(reviews);
-      } else {
-        res.status(400).json({ message: "Invalid query parameters" });
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
+    if (restaurantId) {
+      const reviews = await storage.getReviewsByRestaurant(parseInt(restaurantId));
+      return res.json(reviews);
     }
-  });
+    
+    if (userId) {
+      const reviews = await storage.getReviewsByUser(parseInt(userId));
+      return res.json(reviews);
+    }
+
+    // Se não for por restaurante ou usuário, o padrão é retornar as mais recentes.
+    // Isso cobre tanto o caso de ?recent=true quanto o caso sem parâmetros.
+    const reviews = await storage.getRecentReviews(10);
+    res.json(reviews);
+    
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
   app.get("/api/reviews/:id", async (req, res) => {
     try {
@@ -199,14 +211,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/reviews", async (req, res) => {
-    try {
-      const reviewData = insertReviewSchema.parse(req.body);
-      const review = await storage.createReview(reviewData);
-      res.status(201).json(review);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid review data" });
-    }
-  });
+  try {
+    const reviewData = insertReviewSchema.parse(req.body);
+    const review = await storage.createReview(reviewData);
+    res.status(201).json(review);
+  } catch (error: any) { // Mudança para 'any' para acessar a propriedade 'message'
+    // Log do erro completo no terminal para depuração
+    console.error("Erro de validação ao criar avaliação:", error); 
+
+    // Envia uma mensagem de erro mais detalhada para o Postman/Front-end
+    res.status(400).json({ 
+      message: "Dados da avaliação inválidos.", 
+      details: error.flatten ? error.flatten() : error.message 
+    });
+  }
+});
 
   const httpServer = createServer(app);
   return httpServer;

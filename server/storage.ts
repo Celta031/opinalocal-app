@@ -21,6 +21,7 @@ export interface IStorage {
   searchCategories(query: string): Promise<Category[]>;
   createCategory(category: InsertCategory): Promise<Category>;
   updateCategoryStatus(id: number, status: string): Promise<Category | undefined>;
+  getCategoryByName(name: string): Promise<Category | undefined>;
   
   // Reviews
   getReview(id: number): Promise<Review | undefined>;
@@ -348,6 +349,13 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
+  }
+
+  async getCategoryByName(name: string): Promise<Category | undefined> {
+    const [category] = await db.select()
+      .from(categories)
+      .where(ilike(categories.name, name));
+    return category;
   }
 
   async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> {
