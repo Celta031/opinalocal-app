@@ -9,12 +9,11 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Plus, Menu, LogOut, User, Settings } from "lucide-react";
+import { Plus, Menu, LogOut, User, Settings, Shield } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
 
 export const Navigation = () => {
-  const [location] = useLocation();
   const { user, signOut } = useAuth();
   const { setShowCreateReviewModal } = useApp();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -27,6 +26,10 @@ export const Navigation = () => {
   const handleSignOut = async () => {
     await signOut();
   };
+  
+  const handleLinkClick = () => {
+    setShowMobileMenu(false);
+  };
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -34,9 +37,9 @@ export const Navigation = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link href="/">
-              <h1 className="text-2xl font-bold text-orange-600 cursor-pointer">
+              <a className="text-2xl font-bold text-orange-600 cursor-pointer">
                 OpinaLocal
-              </h1>
+              </a>
             </Link>
           </div>
 
@@ -51,27 +54,31 @@ export const Navigation = () => {
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="p-0">
+                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar>
                     <AvatarImage src={user?.photoURL || undefined} />
                     <AvatarFallback>
-                      {user?.name.charAt(0).toUpperCase()}
+                      {user?.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>
-                  <User className="w-4 h-4 mr-2" />
-                  Meu Perfil
+                  <User className="w-4 h-4 mr-2" /> Meu Perfil
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Configurações
+                  <Settings className="w-4 h-4 mr-2" /> Configurações
                 </DropdownMenuItem>
+                {user?.role === 'admin' && (
+                  <Link href="/admin">
+                    <DropdownMenuItem>
+                      <Shield className="w-4 h-4 mr-2" /> Painel Admin
+                    </DropdownMenuItem>
+                  </Link>
+                )}
                 <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sair
+                  <LogOut className="w-4 h-4 mr-2" /> Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -86,42 +93,36 @@ export const Navigation = () => {
                 </Button>
               </SheetTrigger>
               <SheetContent side="right">
-                <div className="flex flex-col space-y-4 mt-8">
-                  <div className="flex items-center space-x-3 pb-4 border-b">
+                <div className="flex flex-col space-y-2 mt-8">
+                  <div className="flex items-center space-x-3 pb-4 border-b mb-4">
                     <Avatar>
                       <AvatarImage src={user?.photoURL || undefined} />
-                      <AvatarFallback>
-                        {user?.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
+                      <AvatarFallback>{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <span className="font-medium">{user?.name}</span>
                   </div>
                   
-                  <Button 
-                    onClick={handleNewReview} 
-                    className="w-full bg-orange-600 hover:bg-orange-700"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nova Avaliação
+                  <Button onClick={handleNewReview} className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white">
+                    <Plus className="w-4 h-4 mr-2" /> Nova Avaliação
                   </Button>
-                  
                   <Button variant="ghost" className="w-full justify-start">
-                    <User className="w-4 h-4 mr-2" />
-                    Meu Perfil
+                    <User className="w-4 h-4 mr-2" /> Meu Perfil
                   </Button>
                   
+                  {/* CORREÇÃO AQUI: Adicionando o link do Painel Admin no menu mobile */}
+                  {user?.role === 'admin' && (
+                    <Link href="/admin" onClick={handleLinkClick}>
+                      <Button variant="ghost" className="w-full justify-start">
+                        <Shield className="w-4 h-4 mr-2" /> Painel Admin
+                      </Button>
+                    </Link>
+                  )}
+
                   <Button variant="ghost" className="w-full justify-start">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Configurações
+                    <Settings className="w-4 h-4 mr-2" /> Configurações
                   </Button>
-                  
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start text-red-600 hover:text-red-700"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sair
+                  <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700" onClick={handleSignOut}>
+                    <LogOut className="w-4 h-4 mr-2" /> Sair
                   </Button>
                 </div>
               </SheetContent>

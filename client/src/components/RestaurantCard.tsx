@@ -47,15 +47,11 @@ export const RestaurantCard = ({
               <MapPin className="w-4 h-4 mr-1" />
               <span>{address.fullAddress}</span>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <StarRating rating={averageRating} readonly size="sm" />
-                <span className="text-sm text-gray-500">
-                  {averageRating.toFixed(1)}
-                </span>
-              </div>
-              <span className="text-sm text-gray-500">
-                {reviewCount} {reviewCount === 1 ? 'avaliação' : 'avaliações'}
+            <div className="flex items-center space-x-2 text-sm flex-nowrap">
+              <StarRating rating={averageRating} readonly size="sm" />
+              <span className="font-medium text-gray-800">{averageRating.toFixed(1)}</span>
+              <span className="text-gray-500 whitespace-nowrap">
+                ({reviewCount} {reviewCount === 1 ? 'avaliação' : 'avaliações'})
               </span>
             </div>
           </div>
