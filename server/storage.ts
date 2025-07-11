@@ -1,6 +1,6 @@
 import { users, restaurants, categories, reviews, type User, type InsertUser, type Restaurant, type InsertRestaurant, type Category, type InsertCategory, type Review, type InsertReview } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, desc, and, sql, count, avg } from "drizzle-orm";
+import { eq, ilike, desc, and, or, sql, count, avg } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -418,14 +418,20 @@ export class DatabaseStorage implements IStorage {
             .groupBy(reviews.restaurantId)
             .as("sq");
 
-        const conditions = [];
-        if (query) {
-            conditions.push(ilike(restaurants.name, `%${query}%`));
-        }
+        // 1. Condição de busca: o termo deve estar no NOME OU no ENDEREÇO
+        const searchCondition = or(
+            ilike(restaurants.name, `%${query}%`),
+            // A sintaxe (address ->> 'fullAddress') busca dentro do campo JSON
+            ilike(sql`(${restaurants.address} ->> 'fullAddress')`, `%${query}%`)
+        );
+
+        const conditions = [searchCondition];
+
+        // 2. Adiciona o filtro de validação, se aplicável
         if (validated !== undefined) {
             conditions.push(eq(restaurants.isValidated, validated));
         }
-
+        
         const results = await db
             .select()
             .from(restaurants)
