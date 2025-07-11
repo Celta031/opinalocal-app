@@ -46,9 +46,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userData = insertUserSchema.parse(req.body);
       const user = await storage.createUser(userData);
       res.status(201).json(user);
-    } catch (error) {
-      console.error("User creation error:", error);
-      res.status(400).json({ message: "Invalid user data", error: error.message });
+    } catch (error: any) { // <-- Adicione : any aqui
+        console.error("User creation error:", error);
+        res.status(400).json({ message: "Invalid user data", error: error.flatten ? error.flatten() : error.message });
     }
   });
 
@@ -127,8 +127,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 3. Se não existir, cria a nova categoria
       const category = await storage.createCategory(categoryData);
       res.status(201).json(category);
-    } catch (error: any) {
-      res.status(400).json({ message: "Invalid category data", error: error.message });
+    } catch (error: any) { // <-- Adicione : any aqui
+        res.status(400).json({ message: "Invalid category data", error: error.flatten ? error.flatten() : error.message });
     }
   });
 
@@ -142,16 +142,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(categories);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.post("/api/categories", async (req, res) => {
-    try {
-      const categoryData = insertCategorySchema.parse(req.body);
-      const category = await storage.createCategory(categoryData);
-      res.status(201).json(category);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid category data" });
     }
   });
 
@@ -194,6 +184,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(reviews);
     
   } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.get("/api/reviews/all", async (req, res) => {
+  try {
+    const timeframe = req.query.timeframe as string | undefined;
+    const reviews = await storage.getAllReviewsWithDetails(timeframe);
+    res.json(reviews);
+  } catch (error) {
+    console.error("Erro ao buscar todas as avaliações:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });

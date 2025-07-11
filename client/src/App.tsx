@@ -12,6 +12,7 @@ import { CreateReview } from "@/pages/CreateReview";
 import { AdminPanel } from "@/pages/AdminPanel";
 import { RestaurantRegistrationModal } from "@/components/RestaurantRegistrationModal";
 import NotFound from "@/pages/not-found";
+import { AllReviews } from "@/pages/AllReviews";
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -34,6 +35,7 @@ function AppContent() {
         <Route path="/" component={Dashboard} />
         <Route path="/restaurant/:id" component={RestaurantProfile} />
         <Route path="/admin" component={AdminPanel} />
+        <Route path="/todas-avaliacoes" component={AllReviews} /> {/* <-- Adicione esta rota */}
         <Route component={NotFound} />
       </Switch>
       <CreateReview />

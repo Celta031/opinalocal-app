@@ -28,6 +28,7 @@ export interface IStorage {
   getReviewsByRestaurant(restaurantId: number): Promise<Review[]>;
   getReviewsByUser(userId: number): Promise<Review[]>;
   getRecentReviews(limit?: number): Promise<Review[]>;
+  getAllReviewsWithDetails(): Promise<any[]>;
   createReview(review: InsertReview): Promise<Review>;
 }
 
@@ -213,6 +214,18 @@ export class MemStorage implements IStorage {
     });
   }
 
+  async getAllReviewsWithDetails(): Promise<any[]> {
+        const reviews = Array.from(this.reviews.values()).sort(
+            (a, b) => b.createdAt.getTime() - a.createdAt.getTime()
+        );
+
+        return reviews.map(review => ({
+            ...review,
+            user: this.users.get(review.userId),
+            restaurant: this.restaurants.get(review.restaurantId),
+        }));
+    }
+
   // Users
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
@@ -342,6 +355,11 @@ export class MemStorage implements IStorage {
     };
     this.reviews.set(review.id, review);
     return review;
+  }
+  async getCategoryByName(name: string): Promise<Category | undefined> {
+    return Array.from(this.categories.values()).find(
+      (category) => category.name.toLowerCase() === name.toLowerCase()
+    );
   }
 }
 
@@ -473,10 +491,54 @@ export class DatabaseStorage implements IStorage {
   async getReviewsByUser(userId: number): Promise<Review[]> {
     return await db.select().from(reviews).where(eq(reviews.userId, userId));
   }
+  async getAllReviewsWithDetails(timeframe?: string): Promise<any[]> {
+      const conditions = [];
 
-  async getRecentReviews(limit: number = 10): Promise<Review[]> {
-    return await db.select().from(reviews).orderBy(desc(reviews.createdAt)).limit(limit);
+      // Lógica para filtrar por período
+      if (timeframe === 'today') {
+          // Compara a data de criação com a data atual do servidor
+          conditions.push(sql`date("reviews"."created_at") = current_date`);
+      } else if (timeframe === 'week') {
+          conditions.push(sql`date_trunc('week', "reviews"."created_at") = date_trunc('week', current_date)`);
+      } else if (timeframe === 'month') {
+          conditions.push(sql`date_trunc('month', "reviews"."created_at") = date_trunc('month', current_date)`);
+      }
+
+      // Usamos o construtor de query padrão para mais controle
+      const results = await db
+        .select({
+          // Selecionamos explicitamente os dados que queremos
+          review: reviews,
+          user: users,
+          restaurant: restaurants,
+        })
+        .from(reviews)
+        .innerJoin(users, eq(reviews.userId, users.id)) // Junta com a tabela de usuários
+        .innerJoin(restaurants, eq(reviews.restaurantId, restaurants.id)) // Junta com a tabela de restaurantes
+        .where(and(...conditions)) // Aplica o filtro de data
+        .orderBy(desc(reviews.createdAt));
+        
+      // Remodelamos os dados para o formato que o front-end espera
+      return results.map(r => ({
+          ...r.review,
+          user: r.user,
+          restaurant: r.restaurant,
+      }));
   }
+  
+
+  async getRecentReviews(limit: number = 10): Promise<any[]> {
+    return await db.query.reviews.findMany({
+        orderBy: (reviews, { desc }) => [desc(reviews.createdAt)],
+        limit: limit,
+        with: {
+            user: true,       // Inclui os dados do usuário
+            restaurant: true, // Inclui os dados do restaurante
+        },
+    });
+
+  
+}
 
   async createReview(insertReview: InsertReview): Promise<Review> {
     const [review] = await db

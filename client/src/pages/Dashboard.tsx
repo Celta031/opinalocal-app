@@ -11,6 +11,10 @@ import { useApp } from "@/context/AppContext";
 import { useAuth } from "@/context/AuthContext";
 import { Restaurant, Review, User } from "@shared/schema";
 import { useLocation } from "wouter";
+import { Link } from "wouter";
+
+type ReviewWithDetails = Review & { user: User; restaurant: Restaurant };
+
 
 export const Dashboard = () => {
   const [, setLocation] = useLocation();
@@ -18,24 +22,14 @@ export const Dashboard = () => {
   const { setShowCreateReviewModal, setShowRestaurantModal } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { data: restaurants = [] } = useQuery<Restaurant[]>({
-    queryKey: ["/api/restaurants"],
+  const { data: recentReviews = [] } = useQuery<ReviewWithDetails[]>({
+    queryKey: ["/api/reviews", { recent: true }],
     enabled: !!user,
   });
 
   const { data: searchResults = [] } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants/search", searchQuery],
     enabled: !!user && searchQuery.length > 0,
-  });
-
-  const { data: recentReviews = [] } = useQuery<Review[]>({
-    queryKey: ["/api/reviews", { recent: true }],
-    enabled: !!user,
-  });
-
-  const { data: users = [] } = useQuery<User[]>({
-    queryKey: ["/api/users"],
-    enabled: !!user,
   });
 
   const handleRestaurantSearch = (query: string) => {
@@ -130,30 +124,31 @@ export const Dashboard = () => {
               <h3 className="text-xl font-semibold text-gray-900">
                 Avaliações Recentes
               </h3>
-              <Button variant="ghost" className="text-orange-600 hover:text-orange-700">
-                Ver todas
-              </Button>
+              <Link href="/todas-avaliacoes">
+                <Button variant="ghost" className="text-orange-600 hover:text-orange-700">
+                  Ver todas
+                </Button>
+              </Link>
             </div>
             
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentReviews.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
+                // Esta parte agora não é ideal dentro de um grid, vamos ajustar depois
+                <div className="text-center py-8 text-gray-500 col-span-3">
                   <p>Nenhuma avaliação encontrada</p>
                   <p className="text-sm">Seja o primeiro a avaliar um restaurante!</p>
                 </div>
               ) : (
                 recentReviews.map((review) => {
-                  const reviewUser = users.find(u => u.id === review.userId);
-                  const restaurant = restaurants.find(r => r.id === review.restaurantId);
-                  
-                  if (!reviewUser || !restaurant) return null;
+                  // a verificação e o ReviewCard continuam iguais
+                  if (!review.user || !review.restaurant) return null;
                   
                   return (
                     <ReviewCard
                       key={review.id}
                       review={review}
-                      user={reviewUser}
-                      restaurant={restaurant}
+                      user={review.user}
+                      restaurant={review.restaurant}
                       showRestaurantName={true}
                     />
                   );

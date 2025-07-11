@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -96,3 +97,22 @@ export type InsertCategory = z.infer<typeof insertCategorySchema>;
 
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
+
+export const usersRelations = relations(users, ({ many }) => ({
+	reviews: many(reviews),
+}));
+
+export const restaurantsRelations = relations(restaurants, ({ many }) => ({
+	reviews: many(reviews),
+}));
+
+export const reviewsRelations = relations(reviews, ({ one }) => ({
+	user: one(users, {
+		fields: [reviews.userId],
+		references: [users.id],
+	}),
+	restaurant: one(restaurants, {
+		fields: [reviews.restaurantId],
+		references: [restaurants.id],
+	}),
+}));
