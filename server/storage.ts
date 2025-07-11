@@ -26,7 +26,8 @@ export interface IStorage {
   // Reviews
   getReview(id: number): Promise<Review | undefined>;
   getReviewsByRestaurant(restaurantId: number): Promise<Review[]>;
-  getReviewsByUser(userId: number): Promise<Review[]>;
+  getReviewsByUser(userId: number): Promise<any[]>;
+  updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined>;
   getRecentReviews(limit?: number): Promise<Review[]>;
   getAllReviewsWithDetails(): Promise<any[]>;
   createReview(review: InsertReview): Promise<Review>;
@@ -228,6 +229,18 @@ export class MemStorage implements IStorage {
     }
 
   // Users
+
+  async updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined> {
+        const user = this.users.get(id);
+        if (!user) {
+            return undefined;
+        }
+        
+        const updatedUser = { ...user, ...data };
+        this.users.set(id, updatedUser);
+        return updatedUser;
+    }
+
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
   }
@@ -508,8 +521,23 @@ export class DatabaseStorage implements IStorage {
     });
 }
 
-  async getReviewsByUser(userId: number): Promise<Review[]> {
-    return await db.select().from(reviews).where(eq(reviews.userId, userId));
+  async getReviewsByUser(userId: number): Promise<any[]> {
+    return await db.query.reviews.findMany({
+        where: eq(reviews.userId, userId),
+        orderBy: (reviews, { desc }) => [desc(reviews.createdAt)],
+        with: {
+            restaurant: true,
+        },
+    });
+  }
+
+  async updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(data)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
   }
   async getAllReviewsWithDetails(timeframe?: string): Promise<any[]> {
       const conditions = [];

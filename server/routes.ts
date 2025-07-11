@@ -5,6 +5,23 @@ import { insertRestaurantSchema, insertCategorySchema, insertReviewSchema, inser
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Users
+
+  app.patch("/api/users/:id", async (req, res) => {
+  try {
+    // Usaremos um schema parcial para permitir a atualização de apenas alguns campos
+    const userData = insertUserSchema.partial().parse(req.body);
+    const userId = parseInt(req.params.id);
+    
+    const updatedUser = await storage.updateUser(userId, userData);
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json(updatedUser);
+  } catch (error: any) {
+    res.status(400).json({ message: "Invalid user data", details: error.flatten ? error.flatten() : error.message });
+  }
+});
+
   app.get("/api/users/:id", async (req, res) => {
     try {
       const user = await storage.getUser(parseInt(req.params.id));

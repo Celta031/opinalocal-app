@@ -13,6 +13,7 @@ import { AdminPanel } from "@/pages/AdminPanel";
 import { RestaurantRegistrationModal } from "@/components/RestaurantRegistrationModal";
 import NotFound from "@/pages/not-found";
 import { AllReviews } from "@/pages/AllReviews";
+import { UserProfile } from "@/pages/UserProfile";
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -33,6 +34,7 @@ function AppContent() {
     <AppProvider>
       <Switch>
         <Route path="/" component={Dashboard} />
+        <Route path="/perfil" component={UserProfile} />
         <Route path="/restaurant/:id" component={RestaurantProfile} />
         <Route path="/admin" component={AdminPanel} />
         <Route path="/todas-avaliacoes" component={AllReviews} /> {/* <-- Adicione esta rota */}

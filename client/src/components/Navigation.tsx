@@ -27,6 +27,7 @@ export const Navigation = () => {
     await signOut();
   };
   
+  // Função para fechar o menu mobile ao clicar em um link
   const handleLinkClick = () => {
     setShowMobileMenu(false);
   };
@@ -64,9 +65,11 @@ export const Navigation = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>
-                  <User className="w-4 h-4 mr-2" /> Meu Perfil
-                </DropdownMenuItem>
+                <Link href="/perfil">
+                  <DropdownMenuItem>
+                    <User className="w-4 h-4 mr-2" /> Meu Perfil
+                  </DropdownMenuItem>
+                </Link>
                 <DropdownMenuItem>
                   <Settings className="w-4 h-4 mr-2" /> Configurações
                 </DropdownMenuItem>
@@ -105,11 +108,15 @@ export const Navigation = () => {
                   <Button onClick={handleNewReview} className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white">
                     <Plus className="w-4 h-4 mr-2" /> Nova Avaliação
                   </Button>
-                  <Button variant="ghost" className="w-full justify-start">
-                    <User className="w-4 h-4 mr-2" /> Meu Perfil
-                  </Button>
                   
-                  {/* CORREÇÃO AQUI: Adicionando o link do Painel Admin no menu mobile */}
+                  {/* AQUI ESTÁ A CORREÇÃO */}
+                  <Link href="/perfil" onClick={handleLinkClick}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <User className="w-4 h-4 mr-2" />
+                      Meu Perfil
+                    </Button>
+                  </Link>
+                  
                   {user?.role === 'admin' && (
                     <Link href="/admin" onClick={handleLinkClick}>
                       <Button variant="ghost" className="w-full justify-start">
@@ -121,6 +128,7 @@ export const Navigation = () => {
                   <Button variant="ghost" className="w-full justify-start">
                     <Settings className="w-4 h-4 mr-2" /> Configurações
                   </Button>
+                  
                   <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700" onClick={handleSignOut}>
                     <LogOut className="w-4 h-4 mr-2" /> Sair
                   </Button>
