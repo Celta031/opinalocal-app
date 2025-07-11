@@ -141,6 +141,7 @@ export class MemStorage implements IStorage {
       email: "admin@opinalocal.com",
       name: "Admin OpinaLocal",
       photoURL: null,
+      role: "admin",
       createdAt: new Date()
     };
     this.users.set(adminUser.id, adminUser);
@@ -243,6 +244,7 @@ export class MemStorage implements IStorage {
     const user: User = {
       id: this.userIdCounter++,
       ...insertUser,
+      role: insertUser.role || "user",
       photoURL: insertUser.photoURL || null,
       createdAt: new Date(),
     };
