@@ -1,6 +1,6 @@
 import { users, restaurants, categories, reviews, type User, type InsertUser, type Restaurant, type InsertRestaurant, type Category, type InsertCategory, type Review, type InsertReview } from "@shared/schema";
 import { db } from "./db";
-import { eq, ilike, desc, and, sql } from "drizzle-orm";
+import { eq, ilike, desc, and, sql, count, avg } from "drizzle-orm";
 
 export interface IStorage {
   // Users
@@ -406,33 +406,39 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(restaurants);
   }
 
-  async searchRestaurants(query: string, validated?: boolean): Promise<Restaurant[]> {
-    
-    // Adicionamos um log para ver o que a função está recebendo
-    console.log(`[STORAGE] Recebido para busca -> query: "${query}", validated: ${validated}`);
+  async searchRestaurants(query: string, validated?: boolean): Promise<any[]> {
+        // Esta subquery calcula a contagem de reviews e a média das notas para cada restaurante
+        const sq = db
+            .select({
+                restaurantId: reviews.restaurantId,
+                reviewCount: sql<number>`cast(${count(reviews.id)} as int)`.as("review_count"),
+                averageRating: avg(reviews.overallRating).as("average_rating"),
+            })
+            .from(reviews)
+            .groupBy(reviews.restaurantId)
+            .as("sq");
 
-    // Cria a query base
-    const queryBuilder = db.select().from(restaurants);
+        const conditions = [];
+        if (query) {
+            conditions.push(ilike(restaurants.name, `%${query}%`));
+        }
+        if (validated !== undefined) {
+            conditions.push(eq(restaurants.isValidated, validated));
+        }
 
-    // Cria as condições
-    const conditions = [];
-    if (query) {
-      conditions.push(ilike(restaurants.name, `%${query}%`));
-    }
-    if (validated !== undefined) {
-      conditions.push(eq(restaurants.isValidated, validated));
-    }
+        const results = await db
+            .select()
+            .from(restaurants)
+            .leftJoin(sq, eq(restaurants.id, sq.restaurantId))
+            .where(and(...conditions));
 
-    // Se houver condições, aplica. Senão, retorna array vazio.
-    if (conditions.length > 0) {
-      const results = await queryBuilder.where(and(...conditions));
-      console.log(`[STORAGE] Encontrados ${results.length} resultados.`);
-      return results;
-    } else {
-      console.log(`[STORAGE] Nenhuma condição de busca, retornando vazio.`);
-      return [];
+        // Formata o resultado para o front-end
+        return results.map(r => ({
+            ...r.restaurants,
+            reviewCount: r.sq?.reviewCount || 0,
+            averageRating: parseFloat(r.sq?.averageRating || "0"),
+        }));
     }
-}
 
   async createRestaurant(insertRestaurant: InsertRestaurant): Promise<Restaurant> {
     const [restaurant] = await db
@@ -484,9 +490,15 @@ export class DatabaseStorage implements IStorage {
     return review || undefined;
   }
 
-  async getReviewsByRestaurant(restaurantId: number): Promise<Review[]> {
-    return await db.select().from(reviews).where(eq(reviews.restaurantId, restaurantId));
-  }
+  async getReviewsByRestaurant(restaurantId: number): Promise<any[]> {
+    return await db.query.reviews.findMany({
+        where: eq(reviews.restaurantId, restaurantId),
+        orderBy: (reviews, { desc }) => [desc(reviews.createdAt)],
+        with: {
+            user: true, // A linha mágica que inclui os dados do usuário
+        },
+    });
+}
 
   async getReviewsByUser(userId: number): Promise<Review[]> {
     return await db.select().from(reviews).where(eq(reviews.userId, userId));

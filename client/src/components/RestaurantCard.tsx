@@ -1,13 +1,14 @@
 import { Restaurant } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { StarRating } from "./StarRating";
-import { MapPin } from "lucide-react";
+import { MapPin, Utensils } from "lucide-react";
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
   onClick: () => void;
   averageRating?: number;
   reviewCount?: number;
+  showPhoto?: boolean;
 }
 
 export const RestaurantCard = ({
@@ -15,6 +16,7 @@ export const RestaurantCard = ({
   onClick,
   averageRating = 0,
   reviewCount = 0,
+  showPhoto = true,
 }: RestaurantCardProps) => {
   const address = restaurant.address as any;
 
@@ -25,13 +27,20 @@ export const RestaurantCard = ({
     >
       <CardContent className="p-4">
         <div className="flex items-start space-x-3">
-          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-            <img
-              src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=80&h=80"
-              alt={restaurant.name}
-              className="w-full h-full object-cover rounded-lg"
-            />
-          </div>
+          {/* Lógica para exibir a foto ou um ícone */}
+          {showPhoto ? (
+            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+              <img
+                src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=80&h=80"
+                alt={restaurant.name}
+                className="w-full h-full object-cover rounded-lg"
+              />
+            </div>
+          ) : (
+            <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+              <Utensils className="w-8 h-8 text-gray-400" />
+            </div>
+          )}
           <div className="flex-1">
             <h3 className="font-medium text-gray-900 mb-1">{restaurant.name}</h3>
             <div className="flex items-center text-sm text-gray-600 mb-2">
@@ -46,7 +55,7 @@ export const RestaurantCard = ({
                 </span>
               </div>
               <span className="text-sm text-gray-500">
-                {reviewCount} reviews
+                {reviewCount} {reviewCount === 1 ? 'avaliação' : 'avaliações'}
               </span>
             </div>
           </div>

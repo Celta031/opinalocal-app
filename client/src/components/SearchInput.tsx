@@ -12,80 +12,59 @@ interface SearchResult {
 
 interface SearchInputProps {
   placeholder?: string;
-  onSearch: (query: string) => void;
   results: SearchResult[];
   onSelect: (result: SearchResult) => void;
   loading?: boolean;
-  value?: string;
   className?: string;
+  value: string; // Adicionado
+  onChange: (value: string) => void; // Adicionado
+  onSubmit?: (query: string) => void; // Mantido
 }
 
 export const SearchInput = ({
   placeholder = "Search...",
-  onSearch,
   results,
   onSelect,
   loading = false,
-  value = "",
   className,
+  value,
+  onChange,
+  onSubmit,
 }: SearchInputProps) => {
-  const [query, setQuery] = useState(value);
   const [showResults, setShowResults] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
-  const resultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (query.length > 0) {
-        onSearch(query);
-        setShowResults(true);
-      } else {
-        setShowResults(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [query, onSearch]);
-
-  useEffect(() => {
-    setQuery(value);
-  }, [value]);
+    if (value.length > 0 && results.length > 0) {
+      setShowResults(true);
+    } else {
+      setShowResults(false);
+    }
+  }, [value, results]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showResults) return;
-
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setSelectedIndex(prev => Math.min(prev + 1, results.length - 1));
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setSelectedIndex(prev => Math.max(prev - 1, -1));
-        break;
-      case "Enter":
-        e.preventDefault();
-        if (selectedIndex >= 0 && results[selectedIndex]) {
-          handleSelect(results[selectedIndex]);
-        }
-        break;
-      case "Escape":
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (selectedIndex >= 0 && results[selectedIndex]) {
+        handleSelect(results[selectedIndex]);
+      } else if (onSubmit) {
+        onSubmit(value);
         setShowResults(false);
-        setSelectedIndex(-1);
-        break;
+      }
+      return;
     }
   };
 
   const handleSelect = (result: SearchResult) => {
-    setQuery(result.name);
+    onChange(result.name);
     setShowResults(false);
     setSelectedIndex(-1);
     onSelect(result);
   };
 
   const clearSearch = () => {
-    setQuery("");
+    onChange("");
     setShowResults(false);
     setSelectedIndex(-1);
     inputRef.current?.focus();
@@ -97,27 +76,23 @@ export const SearchInput = ({
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
         <Input
           ref={inputRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
+          onFocus={() => value && results.length > 0 && setShowResults(true)}
+          onBlur={() => setTimeout(() => setShowResults(false), 150)}
           placeholder={placeholder}
           className="pl-10 pr-8"
         />
-        {query && (
-          <button
-            onClick={clearSearch}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
+        {value && (
+          <button onClick={clearSearch} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
       {showResults && (
-        <div
-          ref={resultsRef}
-          className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg mt-2 max-h-60 overflow-y-auto border border-gray-200 z-50"
-        >
+        <div className="absolute top-full left-0 right-0 bg-white rounded-lg shadow-lg mt-2 max-h-60 overflow-y-auto border border-gray-200 z-50">
           {loading ? (
             <div className="p-4 text-center text-gray-500">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto"></div>
