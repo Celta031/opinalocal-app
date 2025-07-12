@@ -4,6 +4,7 @@ import { auth, handleRedirectResult } from "@/lib/firebase";
 import { isFallbackMode } from "@/lib/auth-fallback";
 import { User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { subscribeUserToPush } from '@/lib/push-notifications';
 
 interface AuthContextType {
   firebaseUser: FirebaseUser | null;
@@ -46,7 +47,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         try {
           console.log("Firebase user authenticated:", firebaseUser.uid, firebaseUser.email);
           
-          // Try to get existing user
           const response = await fetch(`/api/users/firebase/${firebaseUser.uid}`);
           
           if (response.ok) {
@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             console.log("Existing user found:", userData);
             setUser(userData);
           } else if (response.status === 404) {
-            // Create new user
+            // Cria um novo usuário se não for encontrado
             const newUser = {
               firebaseUid: firebaseUser.uid,
               email: firebaseUser.email!,
@@ -64,10 +64,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             
             console.log("Creating new user:", newUser);
             const createResponse = await apiRequest("POST", "/api/users", newUser);
+            
             if (createResponse.ok) {
               const userData = await createResponse.json();
               console.log("New user created:", userData);
               setUser(userData);
+              // Após criar um novo usuário, pede a permissão para notificações
+              subscribeUserToPush(userData.id);
             } else {
               console.error("Failed to create user:", await createResponse.text());
             }

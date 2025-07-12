@@ -70,9 +70,11 @@ export const Navigation = () => {
                     <User className="w-4 h-4 mr-2" /> Meu Perfil
                   </DropdownMenuItem>
                 </Link>
-                <DropdownMenuItem>
-                  <Settings className="w-4 h-4 mr-2" /> Configurações
-                </DropdownMenuItem>
+                <Link href="/configuracoes">
+                  <DropdownMenuItem>
+                    <Settings className="w-4 h-4 mr-2" /> Configurações
+                  </DropdownMenuItem>
+                </Link>
                 {user?.role === 'admin' && (
                   <Link href="/admin">
                     <DropdownMenuItem>
@@ -125,9 +127,11 @@ export const Navigation = () => {
                     </Link>
                   )}
 
-                  <Button variant="ghost" className="w-full justify-start">
-                    <Settings className="w-4 h-4 mr-2" /> Configurações
-                  </Button>
+                  <Link href="/configuracoes" onClick={handleLinkClick}>
+                    <Button variant="ghost" className="w-full justify-start">
+                        <Settings className="w-4 h-4 mr-2" /> Configurações
+                    </Button>
+                </Link>
                   
                   <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700" onClick={handleSignOut}>
                     <LogOut className="w-4 h-4 mr-2" /> Sair

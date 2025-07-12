@@ -35,8 +35,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/users/:id", async (req, res) => {
     try {
-      const userData = insertUserSchema.partial().parse(req.body);
+      // Usar .partial() permite que apenas alguns campos sejam enviados para atualização
+      const userData = insertUserSchema.partial().parse(req.body); 
       const updatedUser = await storage.updateUser(parseInt(req.params.id), userData);
+      
       if (!updatedUser) return res.status(404).json({ message: "User not found" });
       res.json(updatedUser);
     } catch (error: any) {
@@ -166,7 +168,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  app.post("/api/notifications/subscribe", async (req, res) => {
+  try {
+    // Aqui você precisaria de uma forma de identificar o usuário logado
+    // Por simplicidade, vamos assumir que o ID do usuário é enviado no corpo
+    const { userId, subscription } = req.body;
+    if (!userId || !subscription) {
+      return res.status(400).json({ message: "UserId e subscription são obrigatórios." });
+    }
+    await storage.savePushSubscription(userId, subscription);
+    res.status(201).json({ success: true });
+  } catch (error) {
+    console.error("Erro ao inscrever para notificações:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
   const httpServer = createServer(app);
   return httpServer;
 }
+

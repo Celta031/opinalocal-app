@@ -10,6 +10,10 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   photoURL: text("photo_url"),
   role: text("role").default("user").notNull(),
+  notifyOnComment: boolean("notify_on_comment").default(true).notNull(),
+  notifyOnNewReview: boolean("notify_on_new_review").default(true).notNull(),
+  notifyOnCategoryApproval: boolean("notify_on_category_approval").default(true).notNull(),
+  notifyOnNewsletter: boolean("notify_on_newsletter").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -117,3 +121,10 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
 		references: [restaurants.id],
 	}),
 }));
+
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  subscription: jsonb("subscription").notNull(), // Armazena o objeto de inscrição
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
