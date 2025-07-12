@@ -18,9 +18,10 @@ export const AdminPanel = () => {
 
   // Busca categorias com status 'pending'
   const { data: pendingCategories = [], isLoading: loadingCategories } = useQuery<Category[]>({
-    queryKey: ["/api/categories", { status: "pending" }],
-    enabled: !!user?.role,
-  });
+  queryKey: ["/api/categories", { status: "pending" }],
+  enabled: !!user?.role,
+  staleTime: 0, 
+});
 
   // Busca restaurantes com is_validated 'false'
   const { data: pendingRestaurants = [], isLoading: loadingRestaurants } = useQuery<Restaurant[]>({

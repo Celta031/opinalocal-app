@@ -479,6 +479,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCategories(status?: string): Promise<Category[]> {
+    console.log(`[STORAGE getCategories] Filtrando por status:`, status);
     if (status) {
       return await db.select().from(categories).where(eq(categories.status, status));
     }

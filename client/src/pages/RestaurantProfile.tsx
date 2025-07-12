@@ -6,11 +6,10 @@ import { StarRating } from "@/components/StarRating";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MapPin, ArrowLeft } from "lucide-react";
-import { Restaurant, Review, User } from "@shared/schema";
+import { Plus, MapPin, ArrowLeft, Loader2 } from "lucide-react";
+import { Restaurant, Review, User, Category } from "@shared/schema";
 import { useApp } from "@/context/AppContext";
 
-// Tipo para a avaliação que inclui os detalhes do usuário
 type ReviewWithUser = Review & { user: User };
 
 export const RestaurantProfile = () => {
@@ -18,27 +17,27 @@ export const RestaurantProfile = () => {
   const restaurantId = params?.id;
   const { setShowCreateReviewModal, setSelectedRestaurant } = useApp();
 
-  // Busca os dados do restaurante
   const { data: restaurant, isLoading: isLoadingRestaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
     enabled: !!restaurantId,
   });
 
-  // Busca as avaliações já com os dados dos usuários incluídos
   const { data: reviews = [], isLoading: isLoadingReviews } = useQuery<ReviewWithUser[]>({
     queryKey: ["/api/reviews", { restaurantId }],
     enabled: !!restaurantId,
   });
 
-  // Calcula a média geral de todas as avaliações
+  const { data: approvedCategories = [] } = useQuery<Category[]>({
+    queryKey: ["/api/categories", { status: 'approved' }],
+  });
+
   const overallRating = reviews.length > 0 
     ? reviews.reduce((acc, review) => acc + review.overallRating, 0) / reviews.length 
     : 0;
 
-  // Calcula a média para uma categoria específica
-  const calculateAverageRating = (category: string) => {
+  const calculateAverageRating = (categoryName: string) => {
     const ratingsForCategory = reviews
-      .map(review => (review.ratings as any)?.standard?.[category] ?? (review.ratings as any)?.custom?.[category])
+      .map(review => (review.ratings as any)?.standard?.[categoryName] ?? (review.ratings as any)?.custom?.[categoryName])
       .filter(rating => rating !== undefined);
     
     if (ratingsForCategory.length === 0) return 0;
@@ -46,18 +45,24 @@ export const RestaurantProfile = () => {
     return ratingsForCategory.reduce((sum, rating) => sum + rating, 0) / ratingsForCategory.length;
   };
 
-  // Coleta todas as categorias únicas (padrão e customizadas) das avaliações
-  const getAllCategories = () => {
-    const categories = new Set<string>();
+  // ESTA É A LÓGICA FINAL E CORRETA
+  const getCategoriesForSummary = () => {
+    // 1. Cria um conjunto com os nomes de todas as categorias aprovadas para uma busca rápida.
+    const approvedCategoryNames = new Set(approvedCategories.map(c => c.name));
+    
+    // 2. Cria um conjunto com todas as categorias únicas que aparecem nas avaliações DESTE restaurante.
+    const categoriesInReviews = new Set<string>();
     reviews.forEach(review => {
       const ratings = review.ratings as any;
-      if (ratings?.standard) Object.keys(ratings.standard).forEach(cat => categories.add(cat));
-      if (ratings?.custom) Object.keys(ratings.custom).forEach(cat => categories.add(cat));
+      if (ratings?.standard) Object.keys(ratings.standard).forEach(cat => categoriesInReviews.add(cat));
+      if (ratings?.custom) Object.keys(ratings.custom).forEach(cat => categoriesInReviews.add(cat));
     });
-    return Array.from(categories);
+    
+    // 3. Retorna apenas as categorias que existem em AMBAS as listas.
+    return Array.from(categoriesInReviews).filter(catName => approvedCategoryNames.has(catName));
   };
 
-  const allCategories = getAllCategories();
+  const categoriesToDisplay = getCategoriesForSummary();
   const allPhotos = reviews.flatMap(review => review.photos as string[] || []);
 
   const handleNewReview = () => {
@@ -67,13 +72,16 @@ export const RestaurantProfile = () => {
   };
 
   if (isLoadingRestaurant || isLoadingReviews) {
-    return <div>Carregando...</div>; // TODO: Adicionar um skeleton state bonito
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+      </div>
+    );
   }
 
   if (!restaurant) {
     return <div>Restaurante não encontrado.</div>;
   }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
@@ -81,7 +89,7 @@ export const RestaurantProfile = () => {
       {/* Cabeçalho */}
       <div className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Link href="/" className="inline-flex items-center text-sm text-gray-600 hover:text-orange-600 mb-4">
+          <Link href="/" className="inline-flex items-center text-sm text-gray-600 hover:text-orange-600 mb-4 cursor-pointer">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Voltar para a página inicial
           </Link>
@@ -129,13 +137,14 @@ export const RestaurantProfile = () => {
               <CardHeader>
                 <h3 className="font-semibold">Resumo das Avaliações</h3>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {allCategories.map(category => (
-                  <div key={category} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-700">{category}</span>
+             <CardContent className="space-y-3">
+                {/* O JSX agora itera sobre a lista final e correta */}
+                {categoriesToDisplay.map(categoryName => (
+                  <div key={categoryName} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-700">{categoryName}</span>
                     <div className="flex items-center gap-2">
-                      <StarRating rating={calculateAverageRating(category)} readonly size="sm" />
-                      <span className="font-medium">{calculateAverageRating(category).toFixed(1)}</span>
+                      <StarRating rating={calculateAverageRating(categoryName)} readonly size="sm" />
+                      <span className="font-medium">{calculateAverageRating(categoryName).toFixed(1)}</span>
                     </div>
                   </div>
                 ))}
@@ -144,9 +153,7 @@ export const RestaurantProfile = () => {
 
             {allPhotos.length > 0 && (
               <Card>
-                <CardHeader>
-                  <h3 className="font-semibold">Galeria de Fotos</h3>
-                </CardHeader>
+                <CardHeader><h3 className="font-semibold">Galeria de Fotos</h3></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-2">
                     {allPhotos.slice(0, 9).map((photo, index) => (
