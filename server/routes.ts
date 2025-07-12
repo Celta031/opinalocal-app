@@ -201,18 +201,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   app.post("/api/reviews/:reviewId/comments", async (req, res) => {
-    try {
-      // Aqui você precisaria validar o corpo do comentário e o usuário logado
-      const commentData = insertCommentSchema.parse({ 
-        ...req.body, 
-        reviewId: parseInt(req.params.reviewId) 
-      });
-      const comment = await storage.createComment(commentData);
-      res.status(201).json(comment);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid comment data" });
+  try {
+    const reviewId = parseInt(req.params.reviewId);
+    const commentData = insertCommentSchema.parse({ 
+      ...req.body, 
+      reviewId: reviewId 
+    });
+
+    const comment = await storage.createComment(commentData);
+    
+    // --- LÓGICA DE NOTIFICAÇÃO ---
+    const reviewDetails = await storage.getReviewWithAuthor(reviewId);
+    
+    // Verifica se o autor da avaliação e quem comentou são pessoas diferentes
+    if (reviewDetails && reviewDetails.user.id !== comment.userId) {
+      const restaurant = await storage.getRestaurant(reviewDetails.review.restaurantId);
+      const commenter = await storage.getUser(comment.userId);
+
+      await sendNotification(
+        reviewDetails.user, // Envia para o autor da avaliação
+        {
+          title: `${commenter?.name || 'Alguém'} comentou na sua avaliação!`,
+          body: `Sua avaliação sobre o restaurante "${restaurant?.name}" recebeu um novo comentário.`,
+          url: `/restaurant/${reviewDetails.review.restaurantId}`
+        },
+        'notifyOnComment' // Usa a preferência correta
+      );
     }
-  });
+    // --- FIM DA LÓGICA ---
+
+    res.status(201).json(comment);
+  } catch (error: any) {
+    console.error("Erro ao criar comentário:", error);
+    res.status(400).json({ message: "Invalid comment data", details: error.flatten ? error.flatten() : error.message });
+  }
+});
 
   app.delete("/api/comments/:commentId", async (req, res) => {
     try {

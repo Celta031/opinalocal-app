@@ -33,6 +33,7 @@ export interface IStorage {
   getAllReviewsWithDetails(timeframe?: string): Promise<any[]>;
   createReview(review: InsertReview): Promise<Review>;
   getUsersWhoReviewedRestaurant(restaurantId: number): Promise<User[]>;
+  getReviewWithAuthor(reviewId: number): Promise<{ review: Review, user: User } | undefined>;
 
   // Comments
   createComment(comment: InsertComment): Promise<Comment>;
@@ -70,6 +71,7 @@ export class MemStorage implements IStorage {
     async getAllReviewsWithDetails(timeframe?: string): Promise<any[]> { throw new Error("MemStorage: Method not implemented."); }
     async createReview(review: InsertReview): Promise<Review> { throw new Error("MemStorage: Method not implemented."); }
     async getUsersWhoReviewedRestaurant(restaurantId: number): Promise<User[]> { throw new Error("MemStorage: Method not implemented."); }
+    async getReviewWithAuthor(reviewId: number): Promise<{ review: Review, user: User } | undefined> { throw new Error("MemStorage: Method not implemented."); }
     async createComment(comment: InsertComment): Promise<Comment> { throw new Error("MemStorage: Method not implemented."); }
     async getCommentsByReview(reviewId: number): Promise<any[]> { throw new Error("MemStorage: Method not implemented."); }
     async deleteComment(commentId: number): Promise<void> { throw new Error("MemStorage: Method not implemented."); }
@@ -237,6 +239,19 @@ export class DatabaseStorage implements IStorage {
   async getPushSubscriptions(userId: number): Promise<any[]> {
     return await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
   }
+
+  async getReviewWithAuthor(reviewId: number): Promise<{ review: Review, user: User } | undefined> {
+    const [result] = await db.select({
+        review: reviews,
+        user: users,
+      })
+      .from(reviews)
+      .innerJoin(users, eq(reviews.userId, users.id))
+      .where(eq(reviews.id, reviewId));
+    
+    return result;
+  }
+
 }
 
 export const storage = new DatabaseStorage();
