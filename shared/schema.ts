@@ -47,6 +47,14 @@ export const reviews = pgTable("reviews", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  reviewId: integer("review_id").references(() => reviews.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+  text: text("text").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -103,23 +111,27 @@ export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 
+export const insertCommentSchema = createInsertSchema(comments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+
 export const usersRelations = relations(users, ({ many }) => ({
 	reviews: many(reviews),
+  comments: many(comments), 
 }));
 
 export const restaurantsRelations = relations(restaurants, ({ many }) => ({
 	reviews: many(reviews),
 }));
 
-export const reviewsRelations = relations(reviews, ({ one }) => ({
-	user: one(users, {
-		fields: [reviews.userId],
-		references: [users.id],
-	}),
-	restaurant: one(restaurants, {
-		fields: [reviews.restaurantId],
-		references: [restaurants.id],
-	}),
+export const reviewsRelations = relations(reviews, ({ one, many }) => ({
+  user: one(users, { fields: [reviews.userId], references: [users.id] }),
+  restaurant: one(restaurants, { fields: [reviews.restaurantId], references: [restaurants.id] }),
+  comments: many(comments),
 }));
 
 export const pushSubscriptions = pgTable("push_subscriptions", {
@@ -128,3 +140,4 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   subscription: jsonb("subscription").notNull(), // Armazena o objeto de inscrição
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+

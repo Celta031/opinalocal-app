@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertRestaurantSchema, insertCategorySchema, insertReviewSchema, insertUserSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertCategorySchema, insertReviewSchema, insertUserSchema, insertCommentSchema } from "@shared/schema";
 import { sendNotification } from "./notification";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -101,6 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { status } = req.body;
       const categoryId = parseInt(req.params.id);
+
       if (!['approved', 'pending', 'rejected'].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
@@ -111,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const user = await storage.getUser(parseInt(category.createdBy));
           if (user) {
             await sendNotification(user, {
-              title: "Sua categoria foi aprovada! ✅", // Correto
+              title: "Sua categoria foi aprovada! ✅",
               body: `A categoria "${category.name}" que você sugeriu agora está disponível!`,
               url: `/`
             }, 'notifyOnCategoryApproval');
@@ -162,8 +163,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const user of usersToNotify) {
         if (user.id !== review.userId) {
           await sendNotification(user, {
-            title: `Nova avaliação em ${restaurant?.name}`, // Correto
-            body: `Alguém mais avaliou um restaurante que você conhece. Veja o que disseram!`,
+            title: `Nova avaliação em ${restaurant?.name}`,
+            body: `Alguém mais avaliou um restaurante que você conhece.`,
             url: `/restaurant/${review.restaurantId}`
           }, 'notifyOnNewReview');
         }
@@ -185,6 +186,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       await storage.savePushSubscription(userId, subscription);
       res.status(201).json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/reviews/:reviewId/comments", async (req, res) => {
+    try {
+      const comments = await storage.getCommentsByReview(parseInt(req.params.reviewId));
+      res.json(comments);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  
+  app.post("/api/reviews/:reviewId/comments", async (req, res) => {
+    try {
+      // Aqui você precisaria validar o corpo do comentário e o usuário logado
+      const commentData = insertCommentSchema.parse({ 
+        ...req.body, 
+        reviewId: parseInt(req.params.reviewId) 
+      });
+      const comment = await storage.createComment(commentData);
+      res.status(201).json(comment);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid comment data" });
+    }
+  });
+
+  app.delete("/api/comments/:commentId", async (req, res) => {
+    try {
+      // Aqui você adicionaria uma verificação para garantir que o usuário é admin
+      await storage.deleteComment(parseInt(req.params.commentId));
+      res.status(204).send();
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
