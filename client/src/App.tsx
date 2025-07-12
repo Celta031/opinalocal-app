@@ -17,29 +17,16 @@ import { UserProfile } from "@/pages/UserProfile";
 import { SettingsPage } from "@/pages/SettingsPage";
 
 function AppContent() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Login />;
-  }
-
   return (
     <AppProvider>
       <Switch>
         <Route path="/" component={Dashboard} />
-        <Route path="/perfil" component={UserProfile} />
+        <Route path="/login" component={Login} />
         <Route path="/restaurant/:id" component={RestaurantProfile} />
         <Route path="/admin" component={AdminPanel} />
-        <Route path="/todas-avaliacoes" component={AllReviews} />
+        <Route path="/perfil" component={UserProfile} />
         <Route path="/configuracoes" component={SettingsPage} />
+        <Route path="/todas-avaliacoes" component={AllReviews} />
         <Route component={NotFound} />
       </Switch>
       <CreateReview />

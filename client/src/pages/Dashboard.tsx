@@ -31,7 +31,7 @@ export const Dashboard = () => {
 
   const { data: recentReviews = [] } = useQuery<ReviewWithDetails[]>({
     queryKey: ["/api/reviews", { recent: true }],
-    enabled: !submittedQuery && !!user,
+    enabled: !submittedQuery, // <-- A busca agora só depende de não haver uma pesquisa ativa
   });
 
   const handleSearchSubmit = (query: string) => {

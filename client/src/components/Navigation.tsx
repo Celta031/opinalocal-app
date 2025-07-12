@@ -18,18 +18,19 @@ export const Navigation = () => {
   const { setShowCreateReviewModal } = useApp();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  const handleNewReview = () => {
+  // Função para fechar o menu mobile e disparar a ação de nova avaliação
+  const handleNewReviewClick = () => {
     setShowCreateReviewModal(true);
+    setShowMobileMenu(false);
+  };
+  
+  // Função para fechar o menu mobile ao clicar em um link de navegação
+  const handleLinkClick = () => {
     setShowMobileMenu(false);
   };
 
   const handleSignOut = async () => {
     await signOut();
-  };
-  
-  // Função para fechar o menu mobile ao clicar em um link
-  const handleLinkClick = () => {
-    setShowMobileMenu(false);
   };
 
   return (
@@ -44,99 +45,84 @@ export const Navigation = () => {
             </Link>
           </div>
 
-          {/* Desktop Menu */}
+          {/* --- Menu Desktop --- */}
           <div className="hidden md:flex items-center space-x-4">
-            <span className="text-gray-700">
-              Olá, <span className="font-medium">{user?.name}</span>
-            </span>
-            <Button onClick={handleNewReview} className="bg-orange-600 hover:bg-orange-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Avaliação
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar>
-                    <AvatarImage src={user?.photoURL || undefined} />
-                    <AvatarFallback>
-                      {user?.name?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+            {user ? (
+              // Menu para usuário LOGADO
+              <>
+                <span className="text-gray-700">
+                  Olá, <span className="font-medium">{user.name}</span>
+                </span>
+                <Button onClick={handleNewReviewClick} className="bg-orange-600 hover:bg-orange-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Avaliação
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <Link href="/perfil">
-                  <DropdownMenuItem>
-                    <User className="w-4 h-4 mr-2" /> Meu Perfil
-                  </DropdownMenuItem>
-                </Link>
-                <Link href="/configuracoes">
-                  <DropdownMenuItem>
-                    <Settings className="w-4 h-4 mr-2" /> Configurações
-                  </DropdownMenuItem>
-                </Link>
-                {user?.role === 'admin' && (
-                  <Link href="/admin">
-                    <DropdownMenuItem>
-                      <Shield className="w-4 h-4 mr-2" /> Painel Admin
-                    </DropdownMenuItem>
-                  </Link>
-                )}
-                <DropdownMenuItem onClick={handleSignOut}>
-                  <LogOut className="w-4 h-4 mr-2" /> Sair
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                      <Avatar>
+                        <AvatarImage src={user.photoURL || undefined} />
+                        <AvatarFallback>{user.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <Link href="/perfil"><DropdownMenuItem><User className="w-4 h-4 mr-2" /> Meu Perfil</DropdownMenuItem></Link>
+                    <Link href="/configuracoes"><DropdownMenuItem><Settings className="w-4 h-4 mr-2" /> Configurações</DropdownMenuItem></Link>
+                    {user.role === 'admin' && (
+                      <Link href="/admin"><DropdownMenuItem><Shield className="w-4 h-4 mr-2" /> Painel Admin</DropdownMenuItem></Link>
+                    )}
+                    <DropdownMenuItem onClick={handleSignOut}><LogOut className="w-4 h-4 mr-2" /> Sair</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            ) : (
+              // Menu para VISITANTE
+              <Link href="/login">
+                <Button className="bg-orange-600 hover:bg-orange-700">
+                  Entrar / Cadastrar
+                </Button>
+              </Link>
+            )}
           </div>
 
-          {/* Mobile Menu */}
+          {/* --- Menu Mobile --- */}
           <div className="md:hidden">
             <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="w-5 h-5" />
-                </Button>
+                <Button variant="ghost" size="icon"><Menu className="w-5 h-5" /></Button>
               </SheetTrigger>
               <SheetContent side="right">
-                <div className="flex flex-col space-y-2 mt-8">
-                  <div className="flex items-center space-x-3 pb-4 border-b mb-4">
-                    <Avatar>
-                      <AvatarImage src={user?.photoURL || undefined} />
-                      <AvatarFallback>{user?.name?.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium">{user?.name}</span>
+                {user ? (
+                  // Menu mobile para usuário LOGADO
+                  <div className="flex flex-col space-y-2 mt-8">
+                    <div className="flex items-center space-x-3 pb-4 border-b mb-4">
+                      <Avatar>
+                        <AvatarImage src={user.photoURL || undefined} />
+                        <AvatarFallback>{user.name?.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{user.name}</span>
+                    </div>
+                    <Button onClick={handleNewReviewClick} className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white">
+                      <Plus className="w-4 h-4 mr-2" /> Nova Avaliação
+                    </Button>
+                    <Link href="/perfil" onClick={handleLinkClick}><Button variant="ghost" className="w-full justify-start"><User className="w-4 h-4 mr-2" /> Meu Perfil</Button></Link>
+                    <Link href="/configuracoes" onClick={handleLinkClick}><Button variant="ghost" className="w-full justify-start"><Settings className="w-4 h-4 mr-2" /> Configurações</Button></Link>
+                    {user.role === 'admin' && (
+                      <Link href="/admin" onClick={handleLinkClick}><Button variant="ghost" className="w-full justify-start"><Shield className="w-4 h-4 mr-2" /> Painel Admin</Button></Link>
+                    )}
+                    <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700" onClick={handleSignOut}>
+                      <LogOut className="w-4 h-4 mr-2" /> Sair
+                    </Button>
                   </div>
-                  
-                  <Button onClick={handleNewReview} className="w-full justify-start bg-orange-600 hover:bg-orange-700 text-white">
-                    <Plus className="w-4 h-4 mr-2" /> Nova Avaliação
-                  </Button>
-                  
-                  {/* AQUI ESTÁ A CORREÇÃO */}
-                  <Link href="/perfil" onClick={handleLinkClick}>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <User className="w-4 h-4 mr-2" />
-                      Meu Perfil
-                    </Button>
-                  </Link>
-                  
-                  {user?.role === 'admin' && (
-                    <Link href="/admin" onClick={handleLinkClick}>
-                      <Button variant="ghost" className="w-full justify-start">
-                        <Shield className="w-4 h-4 mr-2" /> Painel Admin
-                      </Button>
+                ) : (
+                  // Menu mobile para VISITANTE
+                  <div className="flex flex-col space-y-4 mt-8">
+                    <Link href="/login" onClick={handleLinkClick}>
+                      <Button className="w-full bg-orange-600 hover:bg-orange-700">Entrar / Cadastrar</Button>
                     </Link>
-                  )}
-
-                  <Link href="/configuracoes" onClick={handleLinkClick}>
-                    <Button variant="ghost" className="w-full justify-start">
-                        <Settings className="w-4 h-4 mr-2" /> Configurações
-                    </Button>
-                </Link>
-                  
-                  <Button variant="ghost" className="w-full justify-start text-red-600 hover:text-red-700" onClick={handleSignOut}>
-                    <LogOut className="w-4 h-4 mr-2" /> Sair
-                  </Button>
-                </div>
+                  </div>
+                )}
               </SheetContent>
             </Sheet>
           </div>
