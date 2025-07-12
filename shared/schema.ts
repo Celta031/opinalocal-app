@@ -10,9 +10,9 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   photoURL: text("photo_url"),
   role: text("role").default("user").notNull(),
-  notifyOnComment: boolean("notify_on_comment").default(true).notNull(),
-  notifyOnNewReview: boolean("notify_on_new_review").default(true).notNull(),
-  notifyOnCategoryApproval: boolean("notify_on_category_approval").default(true).notNull(),
+  notifyOnComment: boolean("notify_on_comment").default(false).notNull(),
+  notifyOnNewReview: boolean("notify_on_new_review").default(false).notNull(),
+  notifyOnCategoryApproval: boolean("notify_on_category_approval").default(false).notNull(),
   notifyOnNewsletter: boolean("notify_on_newsletter").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

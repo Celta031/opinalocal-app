@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertRestaurantSchema, insertCategorySchema, insertReviewSchema, insertUserSchema } from "@shared/schema";
+import { sendNotification } from "./notification";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Users
@@ -10,19 +11,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   });
-
   app.get("/api/users/firebase/:uid", async (req, res) => {
     const user = await storage.getUserByFirebaseUid(req.params.uid);
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   });
-
   app.get("/api/users/email/:email", async (req, res) => {
     const user = await storage.getUserByEmail(req.params.email);
     if (!user) return res.status(404).json({ message: "User not found" });
     res.json(user);
   });
-
   app.post("/api/users", async (req, res) => {
     try {
       const userData = insertUserSchema.parse(req.body);
@@ -32,40 +30,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Invalid user data", details: error.flatten ? error.flatten() : error.message });
     }
   });
-
   app.patch("/api/users/:id", async (req, res) => {
     try {
-      // Usar .partial() permite que apenas alguns campos sejam enviados para atualização
-      const userData = insertUserSchema.partial().parse(req.body); 
+      const userData = insertUserSchema.partial().parse(req.body);
       const updatedUser = await storage.updateUser(parseInt(req.params.id), userData);
-      
       if (!updatedUser) return res.status(404).json({ message: "User not found" });
       res.json(updatedUser);
     } catch (error: any) {
       res.status(400).json({ message: "Invalid user data", details: error.flatten ? error.flatten() : error.message });
     }
   });
-
+  
   // Restaurants
   app.get("/api/restaurants", async (req, res) => {
     const validated = req.query.validated === 'true' ? true : req.query.validated === 'false' ? false : undefined;
     const restaurants = await storage.getRestaurants(validated);
     res.json(restaurants);
   });
-
   app.get("/api/restaurants/search", async (req, res) => {
     const query = req.query.q as string;
     const validated = req.query.validated === 'true' ? true : undefined;
     const restaurants = await storage.searchRestaurants(query, validated);
     res.json(restaurants);
   });
-
   app.get("/api/restaurants/:id", async (req, res) => {
     const restaurant = await storage.getRestaurant(parseInt(req.params.id));
     if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
     res.json(restaurant);
   });
-
   app.post("/api/restaurants", async (req, res) => {
     try {
       const restaurantData = insertRestaurantSchema.parse(req.body);
@@ -75,7 +67,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Invalid restaurant data" });
     }
   });
-
   app.patch("/api/restaurants/:id/validate", async (req, res) => {
     const restaurant = await storage.validateRestaurant(parseInt(req.params.id));
     if (!restaurant) return res.status(404).json({ message: "Restaurant not found" });
@@ -83,23 +74,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Categories
-  // ESTA É A ROTA QUE ESTAVA FALTANDO OU COM PROBLEMA
   app.get("/api/categories", async (req, res) => {
-    try {
-      const status = req.query.status as string;
-      const categories = await storage.getCategories(status);
-      res.json(categories);
-    } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
-    }
+    const status = req.query.status as string;
+    const categories = await storage.getCategories(status);
+    res.json(categories);
   });
-  
   app.get("/api/categories/search", async (req, res) => {
     const query = req.query.q as string;
     const categories = await storage.searchCategories(query);
     res.json(categories);
   });
-
   app.post("/api/categories", async (req, res) => {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
@@ -113,16 +97,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(400).json({ message: "Invalid category data", details: error.flatten ? error.flatten() : error.message });
     }
   });
-
   app.patch("/api/categories/:id/status", async (req, res) => {
     try {
       const { status } = req.body;
+      const categoryId = parseInt(req.params.id);
       if (!['approved', 'pending', 'rejected'].includes(status)) {
         return res.status(400).json({ message: "Invalid status" });
       }
-      const category = await storage.updateCategoryStatus(parseInt(req.params.id), status);
-      if (!category) return res.status(404).json({ message: "Category not found" });
-      res.json(category);
+
+      if (status === 'approved') {
+        const category = await storage.getCategoryById(categoryId);
+        if (category && category.createdBy !== 'admin') {
+          const user = await storage.getUser(parseInt(category.createdBy));
+          if (user) {
+            await sendNotification(user, {
+              title: "Sua categoria foi aprovada! ✅", // Correto
+              body: `A categoria "${category.name}" que você sugeriu agora está disponível!`,
+              url: `/`
+            }, 'notifyOnCategoryApproval');
+          }
+        }
+      }
+      
+      const updatedCategory = await storage.updateCategoryStatus(categoryId, status);
+      if (!updatedCategory) return res.status(404).json({ message: "Category not found" });
+      res.json(updatedCategory);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -130,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Reviews
   app.get("/api/reviews", async (req, res) => {
-    const { restaurantId, userId, recent } = req.query;
+    const { restaurantId, userId } = req.query;
     if (restaurantId) {
       const reviews = await storage.getReviewsByRestaurant(parseInt(restaurantId as string));
       return res.json(reviews);
@@ -142,50 +141,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const recentReviews = await storage.getRecentReviews(10);
     res.json(recentReviews);
   });
-
   app.get("/api/reviews/all", async (req, res) => {
     const timeframe = req.query.timeframe as string | undefined;
     const reviews = await storage.getAllReviewsWithDetails(timeframe);
     res.json(reviews);
   });
-
   app.get("/api/reviews/:id", async (req, res) => {
     const review = await storage.getReview(parseInt(req.params.id));
     if (!review) return res.status(404).json({ message: "Review not found" });
     res.json(review);
   });
-
   app.post("/api/reviews", async (req, res) => {
     try {
       const reviewData = insertReviewSchema.parse(req.body);
       const review = await storage.createReview(reviewData);
+
+      const usersToNotify = await storage.getUsersWhoReviewedRestaurant(review.restaurantId);
+      const restaurant = await storage.getRestaurant(review.restaurantId);
+      
+      for (const user of usersToNotify) {
+        if (user.id !== review.userId) {
+          await sendNotification(user, {
+            title: `Nova avaliação em ${restaurant?.name}`, // Correto
+            body: `Alguém mais avaliou um restaurante que você conhece. Veja o que disseram!`,
+            url: `/restaurant/${review.restaurantId}`
+          }, 'notifyOnNewReview');
+        }
+      }
+      
       res.status(201).json(review);
     } catch (error: any) {
       console.error("Erro de validação ao criar avaliação:", error); 
-      res.status(400).json({ 
-        message: "Dados da avaliação inválidos.", 
-        details: error.flatten ? error.flatten() : error.message 
-      });
+      res.status(400).json({ message: "Dados da avaliação inválidos.", details: error.flatten ? error.flatten() : error.message });
     }
   });
   
+  // Rota para Inscrição de Notificações Push
   app.post("/api/notifications/subscribe", async (req, res) => {
-  try {
-    // Aqui você precisaria de uma forma de identificar o usuário logado
-    // Por simplicidade, vamos assumir que o ID do usuário é enviado no corpo
-    const { userId, subscription } = req.body;
-    if (!userId || !subscription) {
-      return res.status(400).json({ message: "UserId e subscription são obrigatórios." });
+    try {
+      const { userId, subscription } = req.body;
+      if (!userId || !subscription) {
+        return res.status(400).json({ message: "UserId e subscription são obrigatórios." });
+      }
+      await storage.savePushSubscription(userId, subscription);
+      res.status(201).json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
     }
-    await storage.savePushSubscription(userId, subscription);
-    res.status(201).json({ success: true });
-  } catch (error) {
-    console.error("Erro ao inscrever para notificações:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
+  });
 
   const httpServer = createServer(app);
   return httpServer;
 }
-
