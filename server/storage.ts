@@ -19,7 +19,8 @@ export interface IStorage {
   getRestaurantsByOwner(userId: number): Promise<Restaurant[]>;
   updateRestaurant(restaurantId: number, data: Partial<InsertRestaurant>): Promise<Restaurant | undefined>;
   isUserOwner(userId: number, restaurantId: number): Promise<boolean>;
-  
+  linkOwnerToRestaurant(userId: number, restaurantId: number): Promise<void>; // CORREÇÃO: Adicionado à interface
+
   // Categories
   getCategories(status?: string): Promise<Category[]>;
   searchCategories(query: string): Promise<Category[]>;
@@ -63,6 +64,7 @@ export class MemStorage implements IStorage {
     async getRestaurantsByOwner(userId: number): Promise<Restaurant[]> { throw new Error("MemStorage: Method not implemented."); }
     async updateRestaurant(restaurantId: number, data: Partial<InsertRestaurant>): Promise<Restaurant | undefined> { throw new Error("MemStorage: Method not implemented."); }
     async isUserOwner(userId: number, restaurantId: number): Promise<boolean> { throw new Error("MemStorage: Method not implemented."); }
+    async linkOwnerToRestaurant(userId: number, restaurantId: number): Promise<void> { throw new Error("MemStorage: Method not implemented."); }
     async getCategories(status?: string): Promise<Category[]> { throw new Error("MemStorage: Method not implemented."); }
     async searchCategories(query: string): Promise<Category[]> { throw new Error("MemStorage: Method not implemented."); }
     async createCategory(category: InsertCategory): Promise<Category> { throw new Error("MemStorage: Method not implemented."); }
@@ -155,6 +157,10 @@ export class DatabaseStorage implements IStorage {
   async isUserOwner(userId: number, restaurantId: number): Promise<boolean> {
     const result = await db.select().from(restaurantOwners).where(and(eq(restaurantOwners.userId, userId), eq(restaurantOwners.restaurantId, restaurantId)));
     return result.length > 0;
+  }
+  // CORREÇÃO: Implementação do método que estava faltando
+  async linkOwnerToRestaurant(userId: number, restaurantId: number): Promise<void> {
+    await db.insert(restaurantOwners).values({ userId, restaurantId }).onConflictDoNothing();
   }
   async getCategories(status?: string): Promise<Category[]> {
     if (status) {

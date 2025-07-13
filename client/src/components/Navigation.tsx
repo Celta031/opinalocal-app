@@ -1,30 +1,38 @@
 import { useState } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Plus, Menu, LogOut, User, Settings, Shield,Briefcase  } from "lucide-react";
+import { Plus, Menu, LogOut, User, Settings, Shield, Briefcase, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
 
+// Componente para o esqueleto de carregamento
+const AuthNavSkeleton = () => (
+  <div className="flex items-center space-x-4 animate-pulse">
+    <div className="h-7 w-24 bg-gray-200 rounded-md"></div>
+    <div className="h-10 w-36 bg-gray-200 rounded-md"></div>
+    <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+  </div>
+);
+
 export const Navigation = () => {
-  const { user, signOut } = useAuth();
+  // CORREÇÃO: Obtendo o estado 'loading' do contexto de autenticação
+  const { user, signOut, loading } = useAuth();
   const { setShowCreateReviewModal } = useApp();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  // Função para fechar o menu mobile e disparar a ação de nova avaliação
   const handleNewReviewClick = () => {
     setShowCreateReviewModal(true);
     setShowMobileMenu(false);
   };
-  
-  // Função para fechar o menu mobile ao clicar em um link de navegação
+
   const handleLinkClick = () => {
     setShowMobileMenu(false);
   };
@@ -47,7 +55,10 @@ export const Navigation = () => {
 
           {/* --- Menu Desktop --- */}
           <div className="hidden md:flex items-center space-x-4">
-            {user ? (
+            {/* CORREÇÃO: Lógica de renderização condicional com estado de carregamento */}
+            {loading ? (
+              <AuthNavSkeleton />
+            ) : user ? (
               // Menu para usuário LOGADO
               <>
                 <span className="text-gray-700">
@@ -94,7 +105,11 @@ export const Navigation = () => {
                 <Button variant="ghost" size="icon"><Menu className="w-5 h-5" /></Button>
               </SheetTrigger>
               <SheetContent side="right">
-                {user ? (
+                {loading ? (
+                  <div className="flex justify-center items-center h-full">
+                    <Loader2 className="w-8 h-8 animate-spin text-orange-600" />
+                  </div>
+                ) : user ? (
                   // Menu mobile para usuário LOGADO
                   <div className="flex flex-col space-y-2 mt-8">
                     <div className="flex items-center space-x-3 pb-4 border-b mb-4">

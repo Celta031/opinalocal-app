@@ -31,7 +31,7 @@ export const Dashboard = () => {
 
   const { data: recentReviews = [] } = useQuery<ReviewWithDetails[]>({
     queryKey: ["/api/reviews", { recent: true }],
-    enabled: !submittedQuery, // <-- A busca agora só depende de não haver uma pesquisa ativa
+    enabled: !submittedQuery,
   });
 
   const handleSearchSubmit = (query: string) => {
@@ -62,7 +62,7 @@ export const Dashboard = () => {
               results={[]}
               onSelect={(result) => handleRestaurantClick(Number(result.id))}
               onSubmit={handleSearchSubmit}
-              className="max-w-lg mx-auto text-gray-900" // <-- CORRIGE A COR DO TEXTO
+              className="max-w-lg mx-auto text-gray-900"
             />
           </div>
         </div>
@@ -96,14 +96,13 @@ export const Dashboard = () => {
                 <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-orange-600" /></div>
               ) : searchResults.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {searchResults.map((restaurant: any) => ( // Use 'any' aqui para incluir as novas props
+                  {searchResults.map((restaurant: any) => (
                     <RestaurantCard
                       key={restaurant.id}
                       restaurant={restaurant}
                       onClick={() => handleRestaurantClick(restaurant.id)}
-                      averageRating={restaurant.averageRating} // Passando a média
-                      reviewCount={restaurant.reviewCount}   // Passando a contagem
-                      showPhoto={false}                        // Escondendo a foto
+                      averageRating={restaurant.averageRating}
+                      reviewCount={restaurant.reviewCount}
                     />
                   ))}
                 </div>

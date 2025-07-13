@@ -12,36 +12,30 @@ import { useAuth } from "@/context/AuthContext";
 import { Category, Restaurant } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { SearchInput } from "@/components/SearchInput"; // Reutilizaremos o SearchInput
+import { SearchInput } from "@/components/SearchInput"; 
 
 export const AdminPanel = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Estados para a nova funcionalidade de vincular proprietário
   const [ownerEmail, setOwnerEmail] = useState("");
   const [restaurantSearch, setRestaurantSearch] = useState("");
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
 
-  // Busca categorias pendentes
   const { data: pendingCategories = [], isLoading: loadingCategories } = useQuery<Category[]>({
     queryKey: ["/api/categories", { status: "pending" }],
     enabled: !!user?.role,
   });
 
-  // Busca restaurantes não validados
   const { data: pendingRestaurants = [], isLoading: loadingRestaurants } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants", { validated: "false" }],
     enabled: !!user?.role,
   });
 
-  // Busca restaurantes para a aba de vincular proprietário
   const { data: restaurantResults = [] } = useQuery<Restaurant[]>({
     queryKey: ["/api/restaurants/search", { q: restaurantSearch, validated: true }],
     enabled: restaurantSearch.length > 0,
   });
-
-  // --- Mutações para as ações do admin ---
 
   const updateCategoryStatusMutation = useMutation({
     mutationFn: ({ categoryId, status }: { categoryId: number; status: 'approved' | 'rejected' }) =>

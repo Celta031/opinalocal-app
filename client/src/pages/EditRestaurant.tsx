@@ -39,20 +39,22 @@ export const EditRestaurant = () => {
   const { data: restaurant, isLoading } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
     enabled: !!restaurantId,
-    onSuccess: (data) => {
-      // Preenche o formulário com os dados existentes
-      if (data) {
-        setName(data.name);
-        setPhotoUrl(data.photoUrl || null);
-        setValue((data.address as any).fullAddress, false);
-        setAddress(data.address);
-      }
-    },
   });
+
+  // Efeito para preencher o formulário quando os dados do restaurante são carregados
+  useEffect(() => {
+    if (restaurant) {
+      setName(restaurant.name);
+      setPhotoUrl(restaurant.photoUrl || null);
+      setValue((restaurant.address as any).fullAddress, false);
+      setAddress(restaurant.address);
+    }
+  }, [restaurant, setValue]);
+
 
   // Mutação para salvar as alterações
   const updateRestaurantMutation = useMutation({
-    mutationFn: (updatedData: any) => 
+    mutationFn: (updatedData: any) =>
       apiRequest("PATCH", `/api/restaurants/${restaurantId}`, updatedData).then(res => res.json()),
     onSuccess: (updatedData) => {
       toast({ title: "Sucesso!", description: "Restaurante atualizado." });

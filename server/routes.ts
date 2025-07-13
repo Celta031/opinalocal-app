@@ -1,3 +1,5 @@
+// server/routes.ts
+
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -16,6 +18,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Internal server error" });
     }
   });
+
+  // --- ROTA ADICIONADA ---
+  // Adicione esta nova rota para buscar restaurantes por proprietário
+  app.get("/api/users/:userId/restaurants", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const restaurants = await storage.getRestaurantsByOwner(userId);
+      res.json(restaurants);
+    } catch (error) {
+      console.error("Failed to get restaurants by owner:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+  // --- FIM DA ROTA ADICIONADA ---
 
   app.get("/api/users/firebase/:uid", async (req, res) => {
     try {
@@ -83,8 +99,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const restaurantData = insertRestaurantSchema.parse(req.body);
       const restaurant = await storage.createRestaurant(restaurantData);
       res.status(201).json(restaurant);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid restaurant data" });
+    } catch (error: any) {
+      res.status(400).json({ message: "Invalid restaurant data", details: error.flatten ? error.flatten() : error.message });
     }
   });
 
@@ -301,7 +317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.linkOwnerToRestaurant(user.id, restaurantId);
       res.status(200).json({ message: "Usuário vinculado ao restaurante com sucesso." });
-    } catch (error) {
+    } catch (error: any) {
       res.status(500).json({ message: "Erro interno do servidor." });
     }
   });

@@ -2,10 +2,23 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
-const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// body-parser é o middleware que processa o corpo das requisições.
+// O Express o inclui, mas usá-lo explicitamente nos dá mais controle.
+import bodyParser from "body-parser";
 
+const app = express();
+
+// --- CORREÇÃO DEFINITIVA ---
+// A configuração do limite do corpo da requisição DEVE ser a primeira
+// coisa que o app usa para processar os dados que chegam.
+// Removemos as chamadas duplicadas e usamos o bodyParser para garantir.
+console.log("🚀 Aplicando configuração de limite de 50mb para o corpo da requisição...");
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+// --- FIM DA CORREÇÃO ---
+
+
+// Seu middleware de log original (mantido intacto)
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -36,6 +49,7 @@ app.use((req, res, next) => {
   next();
 });
 
+// Sua lógica de inicialização original (mantida intacta)
 (async () => {
   const server = await registerRoutes(app);
 
