@@ -1,4 +1,4 @@
-import { users, restaurants, categories, reviews, comments, pushSubscriptions, type User, type InsertUser, type Restaurant, type InsertRestaurant, type Category, type InsertCategory, type Review, type InsertReview, type Comment, type InsertComment } from "@shared/schema";
+import { users, restaurants, categories, reviews, comments, pushSubscriptions, restaurantOwners, type User, type InsertUser, type Restaurant, type InsertRestaurant, type Category, type InsertCategory, type Review, type InsertReview, type Comment, type InsertComment } from "@shared/schema";
 import { db } from "./db";
 import { eq, ilike, desc, and, or, sql, count, avg } from "drizzle-orm";
 
@@ -16,6 +16,9 @@ export interface IStorage {
   searchRestaurants(query: string, validated?: boolean): Promise<any[]>; 
   createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
   validateRestaurant(id: number): Promise<Restaurant | undefined>;
+  getRestaurantsByOwner(userId: number): Promise<Restaurant[]>;
+  updateRestaurant(restaurantId: number, data: Partial<InsertRestaurant>): Promise<Restaurant | undefined>;
+  isUserOwner(userId: number, restaurantId: number): Promise<boolean>;
   
   // Categories
   getCategories(status?: string): Promise<Category[]>;
@@ -45,8 +48,7 @@ export interface IStorage {
   getPushSubscriptions(userId: number): Promise<any[]>;
 }
 
-// A classe MemStorage não é mais usada ativamente para o banco de dados,
-// mas precisa existir para satisfazer o TypeScript. As funções lançam um erro para indicar que não devem ser usadas.
+// A classe MemStorage não é mais usada ativamente. As funções lançam um erro para indicar que não devem ser usadas.
 export class MemStorage implements IStorage {
     async getUser(id: number): Promise<User | undefined> { throw new Error("MemStorage: Method not implemented."); }
     async getUserByFirebaseUid(firebaseUid: string): Promise<User | undefined> { throw new Error("MemStorage: Method not implemented."); }
@@ -58,6 +60,9 @@ export class MemStorage implements IStorage {
     async searchRestaurants(query: string, validated?: boolean): Promise<any[]> { throw new Error("MemStorage: Method not implemented."); }
     async createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant> { throw new Error("MemStorage: Method not implemented."); }
     async validateRestaurant(id: number): Promise<Restaurant | undefined> { throw new Error("MemStorage: Method not implemented."); }
+    async getRestaurantsByOwner(userId: number): Promise<Restaurant[]> { throw new Error("MemStorage: Method not implemented."); }
+    async updateRestaurant(restaurantId: number, data: Partial<InsertRestaurant>): Promise<Restaurant | undefined> { throw new Error("MemStorage: Method not implemented."); }
+    async isUserOwner(userId: number, restaurantId: number): Promise<boolean> { throw new Error("MemStorage: Method not implemented."); }
     async getCategories(status?: string): Promise<Category[]> { throw new Error("MemStorage: Method not implemented."); }
     async searchCategories(query: string): Promise<Category[]> { throw new Error("MemStorage: Method not implemented."); }
     async createCategory(category: InsertCategory): Promise<Category> { throw new Error("MemStorage: Method not implemented."); }
@@ -139,6 +144,18 @@ export class DatabaseStorage implements IStorage {
     const [restaurant] = await db.update(restaurants).set({ isValidated: true }).where(eq(restaurants.id, id)).returning();
     return restaurant;
   }
+  async getRestaurantsByOwner(userId: number): Promise<Restaurant[]> {
+    const results = await db.select({ restaurant: restaurants }).from(restaurantOwners).where(eq(restaurantOwners.userId, userId)).innerJoin(restaurants, eq(restaurantOwners.restaurantId, restaurants.id));
+    return results.map(r => r.restaurant);
+  }
+  async updateRestaurant(restaurantId: number, data: Partial<InsertRestaurant>): Promise<Restaurant | undefined> {
+    const [updatedRestaurant] = await db.update(restaurants).set(data).where(eq(restaurants.id, restaurantId)).returning();
+    return updatedRestaurant;
+  }
+  async isUserOwner(userId: number, restaurantId: number): Promise<boolean> {
+    const result = await db.select().from(restaurantOwners).where(and(eq(restaurantOwners.userId, userId), eq(restaurantOwners.restaurantId, restaurantId)));
+    return result.length > 0;
+  }
   async getCategories(status?: string): Promise<Category[]> {
     if (status) {
       return await db.select().from(categories).where(eq(categories.status, status));
@@ -169,25 +186,13 @@ export class DatabaseStorage implements IStorage {
     return review;
   }
   async getReviewsByRestaurant(restaurantId: number): Promise<any[]> {
-    return await db.query.reviews.findMany({
-      where: eq(reviews.restaurantId, restaurantId),
-      orderBy: desc(reviews.createdAt),
-      with: { user: true },
-    });
+    return await db.query.reviews.findMany({ where: eq(reviews.restaurantId, restaurantId), orderBy: desc(reviews.createdAt), with: { user: true } });
   }
   async getReviewsByUser(userId: number): Promise<any[]> {
-    return await db.query.reviews.findMany({
-      where: eq(reviews.userId, userId),
-      orderBy: desc(reviews.createdAt),
-      with: { restaurant: true },
-    });
+    return await db.query.reviews.findMany({ where: eq(reviews.userId, userId), orderBy: desc(reviews.createdAt), with: { restaurant: true } });
   }
   async getRecentReviews(limit: number = 10): Promise<any[]> {
-    return await db.query.reviews.findMany({
-      orderBy: desc(reviews.createdAt),
-      limit: limit,
-      with: { user: true, restaurant: true },
-    });
+    return await db.query.reviews.findMany({ orderBy: desc(reviews.createdAt), limit: limit, with: { user: true, restaurant: true } });
   }
   async getAllReviewsWithDetails(timeframe?: string): Promise<any[]> {
     const conditions = [];
@@ -195,12 +200,7 @@ export class DatabaseStorage implements IStorage {
     else if (timeframe === 'week') { conditions.push(sql`date_trunc('week', "reviews"."created_at") = date_trunc('week', current_date)`); }
     else if (timeframe === 'month') { conditions.push(sql`date_trunc('month', "reviews"."created_at") = date_trunc('month', current_date)`); }
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-    const results = await db.select({ review: reviews, user: users, restaurant: restaurants })
-      .from(reviews)
-      .innerJoin(users, eq(reviews.userId, users.id))
-      .innerJoin(restaurants, eq(reviews.restaurantId, restaurants.id))
-      .where(whereClause)
-      .orderBy(desc(reviews.createdAt));
+    const results = await db.select({ review: reviews, user: users, restaurant: restaurants }).from(reviews).innerJoin(users, eq(reviews.userId, users.id)).innerJoin(restaurants, eq(reviews.restaurantId, restaurants.id)).where(whereClause).orderBy(desc(reviews.createdAt));
     return results.map(r => ({ ...r.review, user: r.user, restaurant: r.restaurant }));
   }
   async createReview(insertReview: InsertReview): Promise<Review> {
@@ -211,25 +211,18 @@ export class DatabaseStorage implements IStorage {
     const results = await db.selectDistinct({ user: users }).from(reviews).innerJoin(users, eq(reviews.userId, users.id)).where(eq(reviews.restaurantId, restaurantId));
     return results.map(r => r.user);
   }
+  async getReviewWithAuthor(reviewId: number): Promise<{ review: Review, user: User } | undefined> {
+    const [result] = await db.select({ review: reviews, user: users }).from(reviews).innerJoin(users, eq(reviews.userId, users.id)).where(eq(reviews.id, reviewId));
+    return result;
+  }
   async createComment(comment: InsertComment): Promise<Comment> {
     const [newComment] = await db.insert(comments).values(comment).returning();
     return newComment;
   }
   async getCommentsByReview(reviewId: number): Promise<any[]> {
-    const results = await db
-      .select({
-        comment: comments,
-        user: users,
-      })
-      .from(comments)
-      .innerJoin(users, eq(comments.userId, users.id))
-      .where(eq(comments.reviewId, reviewId))
-      .orderBy(desc(comments.createdAt));
-    return results.map(r => ({
-        ...r.comment,
-        user: r.user,
-    }));
-}
+    const results = await db.select({ comment: comments, user: users }).from(comments).innerJoin(users, eq(comments.userId, users.id)).where(eq(comments.reviewId, reviewId)).orderBy(desc(comments.createdAt));
+    return results.map(r => ({ ...r.comment, user: r.user }));
+  }
   async deleteComment(commentId: number): Promise<void> {
     await db.delete(comments).where(eq(comments.id, commentId));
   }
@@ -239,19 +232,6 @@ export class DatabaseStorage implements IStorage {
   async getPushSubscriptions(userId: number): Promise<any[]> {
     return await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
   }
-
-  async getReviewWithAuthor(reviewId: number): Promise<{ review: Review, user: User } | undefined> {
-    const [result] = await db.select({
-        review: reviews,
-        user: users,
-      })
-      .from(reviews)
-      .innerJoin(users, eq(reviews.userId, users.id))
-      .where(eq(reviews.id, reviewId));
-    
-    return result;
-  }
-
 }
 
 export const storage = new DatabaseStorage();

@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Plus, Menu, LogOut, User, Settings, Shield } from "lucide-react";
+import { Plus, Menu, LogOut, User, Settings, Shield,Briefcase  } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useApp } from "@/context/AppContext";
 
@@ -68,6 +68,7 @@ export const Navigation = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <Link href="/perfil"><DropdownMenuItem><User className="w-4 h-4 mr-2" /> Meu Perfil</DropdownMenuItem></Link>
+                    <Link href="/meus-restaurantes"><DropdownMenuItem><Briefcase className="w-4 h-4 mr-2" /> Meus Restaurantes</DropdownMenuItem></Link>
                     <Link href="/configuracoes"><DropdownMenuItem><Settings className="w-4 h-4 mr-2" /> Configurações</DropdownMenuItem></Link>
                     {user.role === 'admin' && (
                       <Link href="/admin"><DropdownMenuItem><Shield className="w-4 h-4 mr-2" /> Painel Admin</DropdownMenuItem></Link>
@@ -107,6 +108,7 @@ export const Navigation = () => {
                       <Plus className="w-4 h-4 mr-2" /> Nova Avaliação
                     </Button>
                     <Link href="/perfil" onClick={handleLinkClick}><Button variant="ghost" className="w-full justify-start"><User className="w-4 h-4 mr-2" /> Meu Perfil</Button></Link>
+                    <Link href="/meus-restaurantes" onClick={handleLinkClick}><Button variant="ghost" className="w-full justify-start"><Briefcase className="w-4 h-4 mr-2" /> Meus Restaurantes</Button></Link>
                     <Link href="/configuracoes" onClick={handleLinkClick}><Button variant="ghost" className="w-full justify-start"><Settings className="w-4 h-4 mr-2" /> Configurações</Button></Link>
                     {user.role === 'admin' && (
                       <Link href="/admin" onClick={handleLinkClick}><Button variant="ghost" className="w-full justify-start"><Shield className="w-4 h-4 mr-2" /> Painel Admin</Button></Link>

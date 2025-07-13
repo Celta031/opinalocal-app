@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real, primaryKey } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -20,11 +20,21 @@ export const users = pgTable("users", {
 export const restaurants = pgTable("restaurants", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  address: jsonb("address").notNull(), // { street, city, state, postalCode, fullAddress }
-  location: jsonb("location"), // { lat, lng }
+  address: jsonb("address").notNull(),
+  location: jsonb("location"),
+  photoUrl: text("photo_url"), 
   isValidated: boolean("is_validated").default(false).notNull(),
   createdBy: integer("created_by").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const restaurantOwners = pgTable("restaurant_owners", {
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    restaurantId: integer("restaurant_id").notNull().references(() => restaurants.id, { onDelete: 'cascade' }),
+  }, (table) => {
+    return {
+      pk: primaryKey({ columns: [table.userId, table.restaurantId] }),
+    }
 });
 
 export const categories = pgTable("categories", {
@@ -54,6 +64,8 @@ export const comments = pgTable("comments", {
   text: text("text").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+
 
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -111,22 +123,26 @@ export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 
-export const insertCommentSchema = createInsertSchema(comments).omit({
-  id: true,
-  createdAt: true,
-});
-
+export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = z.infer<typeof insertCommentSchema>;
 
 export const usersRelations = relations(users, ({ many }) => ({
 	reviews: many(reviews),
   comments: many(comments), 
+  ownedRestaurants: many(restaurantOwners),
 }));
 
 export const restaurantsRelations = relations(restaurants, ({ many }) => ({
 	reviews: many(reviews),
+  owners: many(restaurantOwners),
 }));
+
+export const restaurantOwnersRelations = relations(restaurantOwners, ({ one }) => ({
+  user: one(users, { fields: [restaurantOwners.userId], references: [users.id] }),
+  restaurant: one(restaurants, { fields: [restaurantOwners.restaurantId], references: [restaurants.id] }),
+}));
+
 
 export const reviewsRelations = relations(reviews, ({ one, many }) => ({
   user: one(users, { fields: [reviews.userId], references: [users.id] }),
@@ -141,3 +157,8 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const updateRestaurantSchema = createInsertSchema(restaurants, {
+  name: z.string().min(1, "O nome é obrigatório"),
+  address: z.any(), // A validação do endereço é complexa, deixamos como 'any' por enquanto
+  photoUrl: z.string().url("URL da foto inválida").optional().nullable(),
+}).pick({ name: true, address: true, photoUrl: true });
